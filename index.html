@@ -702,6 +702,8 @@
                                             path
                                             position
                                             originalPosition
+                                            line
+                                            originalLine
                                             createdAt
                                         }
                                     }
@@ -794,10 +796,25 @@
                 section.className = 'pr-section';
                 section.id = `pr-${index}`;
 
+                // Check if viewer has approved this PR
+                let viewerApproved = false;
+                if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
+                    viewerApproved = prData.info.reviews.nodes.some(review => 
+                        review.author.login === prData.viewerLogin && review.state === 'APPROVED'
+                    );
+                }
+
                 const header = document.createElement('div');
                 header.className = 'pr-header';
+                
+                let approvalBanner = '';
+                if (viewerApproved) {
+                    approvalBanner = '<div class="user-approval-status" style="margin-bottom: 15px;">✓ You have approved this PR</div>';
+                }
+                
                 header.innerHTML = `
                     <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
+                    ${approvalBanner}
                     <div class="pr-meta">
                         <span><strong>Author:</strong> ${escapeHtml(prData.info.author.login)}</span>
                         <span><strong>State:</strong> ${escapeHtml(prData.info.state)}</span>
@@ -853,19 +870,6 @@
             const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
             let html = '<h3>Comments and Reviews</h3>';
             
-            // Check if viewer has approved this PR
-            let viewerApproved = false;
-            if (viewerLogin && prInfo.reviews && prInfo.reviews.nodes) {
-                viewerApproved = prInfo.reviews.nodes.some(review => 
-                    review.author.login === viewerLogin && review.state === 'APPROVED'
-                );
-            }
-            
-            // Show approval status if viewer has approved
-            if (viewerApproved) {
-                html += `<div class="user-approval-status">✓ You have approved this PR</div>`;
-            }
-            
             // Add filter controls
             html += `
                 <div class="comments-filter">
@@ -920,6 +924,8 @@
                                 path: comment.path,
                                 position: comment.position,
                                 originalPosition: comment.originalPosition,
+                                line: comment.line,
+                                originalLine: comment.originalLine,
                                 createdAt: comment.createdAt,
                                 isHidden: hiddenUsers.includes(comment.author.login)
                             };
@@ -944,7 +950,8 @@
                     if (comment.type === 'review') {
                         typeLabel = ` <span style="color: #0366d6; font-weight: 600;">[${comment.state}]</span>`;
                     } else if (comment.type === 'inline') {
-                        typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)})</span>`;
+                        const lineInfo = comment.line ? `:${comment.line}` : '';
+                        typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)}${lineInfo})</span>`;
                     }
                     
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
@@ -1033,10 +1040,11 @@
                                 let commentsHtml = `<strong>💬 Comments on ${escapeHtml(filePath)}:</strong><br>`;
                                 comments.forEach(comment => {
                                     const date = new Date(comment.createdAt).toLocaleString();
+                                    const lineInfo = comment.line ? ` on line ${comment.line}` : '';
                                     commentsHtml += `
                                         <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
                                             <div style="font-weight: 600; margin-bottom: 5px;">
-                                                ${escapeHtml(comment.author)} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
+                                                ${escapeHtml(comment.author)}${lineInfo} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
                                             </div>
                                             <div style="white-space: pre-wrap;">${escapeHtml(comment.body)}</div>
                                         </div>
