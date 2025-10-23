@@ -301,6 +301,13 @@
     <script>
         const PAT_KEY = 'github_pat';
         
+        // Security: HTML escape function to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkPATStatus();
@@ -430,8 +437,8 @@
 
             container.innerHTML = prs.map(pr => `
                 <div class="pr-item">
-                    <span>${pr}</span>
-                    <button onclick="removePR('${pr}')">Remove</button>
+                    <span>${escapeHtml(pr)}</span>
+                    <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
                 </div>
             `).join('');
         }
@@ -577,11 +584,11 @@
                 const header = document.createElement('div');
                 header.className = 'pr-header';
                 header.innerHTML = `
-                    <h2>${prData.info.title} <a href="${prData.info.url}" target="_blank">#${prData.info.number}</a></h2>
+                    <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
                     <div class="pr-meta">
-                        <span><strong>Author:</strong> ${prData.info.author.login}</span>
-                        <span><strong>State:</strong> ${prData.info.state}</span>
-                        <span><strong>Branch:</strong> ${prData.info.headRefName} → ${prData.info.baseRefName}</span>
+                        <span><strong>Author:</strong> ${escapeHtml(prData.info.author.login)}</span>
+                        <span><strong>State:</strong> ${escapeHtml(prData.info.state)}</span>
+                        <span><strong>Branch:</strong> ${escapeHtml(prData.info.headRefName)} → ${escapeHtml(prData.info.baseRefName)}</span>
                         <span><strong>Changes:</strong> +${prData.info.additions} -${prData.info.deletions} (${prData.info.changedFiles} files)</span>
                     </div>
                 `;
@@ -613,7 +620,7 @@
 
         function showError(message) {
             const container = document.getElementById('error-container');
-            container.innerHTML = `<div class="error">${message}</div>`;
+            container.innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
         }
     </script>
 </body>
