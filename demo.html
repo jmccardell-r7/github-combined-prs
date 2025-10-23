@@ -150,6 +150,26 @@
             background: #f8f9fa;
             color: #666;
         }
+        .pr-state-badge {
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .pr-state-badge.open {
+            background: #dcffe4;
+            color: #0e6027;
+        }
+        .pr-state-badge.merged {
+            background: #e1e4e8;
+            color: #6a737d;
+        }
+        .pr-state-badge.closed {
+            background: #ffeef0;
+            color: #d73a49;
+        }
     </style>
 </head>
 <body>
@@ -169,24 +189,28 @@
             <div class="pr-item">
                 <a href="#pr-0">Jump to PR</a>
                 <span>microsoft/vscode/pull/12345</span>
+                <span class="pr-state-badge open">OPEN</span>
                 <span class="pr-general-status approved-state">3✓</span>
                 <span class="approval-badge approved">✓ Approved</span>
             </div>
             <div class="pr-item">
                 <a href="#pr-1">Jump to PR</a>
                 <span>facebook/react/pull/67890</span>
+                <span class="pr-state-badge merged">MERGED</span>
                 <span class="pr-general-status mixed-state">2✓ 1⚠</span>
                 <span class="approval-badge not-approved">Not approved</span>
             </div>
             <div class="pr-item">
                 <a href="#pr-2">Jump to PR</a>
                 <span>nodejs/node/pull/11111</span>
+                <span class="pr-state-badge closed">CLOSED</span>
                 <span class="pr-general-status no-reviews">No reviews</span>
                 <span class="approval-badge approved">✓ Approved</span>
             </div>
         </div>
         <p style="margin-top: 15px; font-size: 14px; color: #666;">
             ✓ Each PR has a "Jump to PR" link that navigates to the PR section<br>
+            ✓ PR state badge shows OPEN, MERGED, or CLOSED<br>
             ✓ General PR status badge shows approvals (✓) and changes requested (⚠)<br>
             ✓ Personal approval badge shows whether you've approved the PR (green) or not (gray)
         </p>
@@ -255,6 +279,7 @@
         <h2>Summary of New Features</h2>
         <ol style="line-height: 2;">
             <li><strong>Jump Links:</strong> "Current PRs" list now includes clickable "Jump to PR" links</li>
+            <li><strong>PR State Badge:</strong> Shows current state of each PR (OPEN, MERGED, CLOSED)</li>
             <li><strong>General PR Status:</strong> Shows approval count and changes requested (e.g., "3✓" or "2✓ 1⚠")</li>
             <li><strong>Personal Approval Status:</strong> Visual badges show whether you've approved each PR</li>
             <li><strong>PR Status Banner:</strong> Shows overall approval state with count of approvals and changes requested</li>
