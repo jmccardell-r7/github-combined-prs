@@ -167,6 +167,37 @@
             font-size: 14px;
         }
         
+        .pr-item a {
+            margin-right: 10px;
+            color: #0366d6;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .pr-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .pr-item .approval-badge {
+            margin-left: 10px;
+            margin-right: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .pr-item .approval-badge.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .pr-item .approval-badge.not-approved {
+            background: #f8f9fa;
+            color: #666;
+        }
+        
         .pr-item button {
             background: #d73a49;
             color: white;
@@ -263,6 +294,7 @@
             border-radius: 6px;
             padding: 15px;
             margin-bottom: 15px;
+            position: relative;
         }
         
         .comment-header {
@@ -280,6 +312,22 @@
         .comment-date {
             color: #666;
             font-size: 12px;
+            flex: 1;
+        }
+        
+        .comment-hide-btn {
+            background: #6a737d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        
+        .comment-hide-btn:hover {
+            background: #586069;
         }
         
         .comment-body {
@@ -390,6 +438,15 @@
             display: none;
         }
         
+        .comment-item.manually-hidden .comment-body {
+            display: none;
+        }
+        
+        .comment-item.manually-hidden {
+            background: #f1f3f5;
+            padding: 10px 15px;
+        }
+        
         .comments-filter {
             margin-bottom: 15px;
             padding: 10px;
@@ -475,12 +532,50 @@
     <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
     <script>
         const PAT_KEY = 'github_pat';
+        const HIDDEN_COMMENTS_KEY = 'hidden_comments';
+        let prDataCache = null;
         
         // Security: HTML escape function to prevent XSS
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // Hidden comments management
+        function getHiddenComments() {
+            const stored = localStorage.getItem(HIDDEN_COMMENTS_KEY);
+            return stored ? JSON.parse(stored) : {};
+        }
+        
+        function saveHiddenComments(hiddenComments) {
+            localStorage.setItem(HIDDEN_COMMENTS_KEY, JSON.stringify(hiddenComments));
+        }
+        
+        function toggleCommentVisibility(prIndex, commentIndex) {
+            const hiddenComments = getHiddenComments();
+            const key = `${prIndex}-${commentIndex}`;
+            
+            if (hiddenComments[key]) {
+                delete hiddenComments[key];
+            } else {
+                hiddenComments[key] = true;
+            }
+            
+            saveHiddenComments(hiddenComments);
+            
+            // Update UI
+            const commentElement = document.querySelector(`[data-pr-index="${prIndex}"][data-comment-index="${commentIndex}"]`);
+            if (commentElement) {
+                const hideBtn = commentElement.querySelector('.comment-hide-btn');
+                if (hiddenComments[key]) {
+                    commentElement.classList.add('manually-hidden');
+                    hideBtn.textContent = 'Show';
+                } else {
+                    commentElement.classList.remove('manually-hidden');
+                    hideBtn.textContent = 'Hide';
+                }
+            }
         }
         
         // Initialize on page load
@@ -610,12 +705,37 @@
                 return;
             }
 
-            container.innerHTML = prs.map(pr => `
-                <div class="pr-item">
-                    <span>${escapeHtml(pr)}</span>
-                    <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
-                </div>
-            `).join('');
+            // If we have cached PR data, show approval status
+            let html = '';
+            prs.forEach((pr, index) => {
+                let approvalBadge = '';
+                if (prDataCache && prDataCache[index]) {
+                    const prData = prDataCache[index];
+                    let viewerApproved = false;
+                    if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
+                        viewerApproved = prData.info.reviews.nodes.some(review => 
+                            review.author.login === prData.viewerLogin && review.state === 'APPROVED'
+                        );
+                    }
+                    
+                    if (viewerApproved) {
+                        approvalBadge = '<span class="approval-badge approved">✓ Approved</span>';
+                    } else {
+                        approvalBadge = '<span class="approval-badge not-approved">Not approved</span>';
+                    }
+                }
+                
+                html += `
+                    <div class="pr-item">
+                        <a href="#pr-${index}">Jump to PR</a>
+                        <span>${escapeHtml(pr)}</span>
+                        ${approvalBadge}
+                        <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
         function loadPRsFromURL() {
@@ -790,6 +910,12 @@
         function renderPRData(prDataArray) {
             const container = document.getElementById('pr-data-container');
             container.innerHTML = '';
+            
+            // Cache the PR data for use in the PR list
+            prDataCache = prDataArray;
+            
+            // Re-render the PR list to show approval status
+            renderPRList();
 
             prDataArray.forEach((prData, index) => {
                 const section = document.createElement('div');
@@ -868,6 +994,7 @@
         
         function renderComments(prInfo, prIndex, viewerLogin) {
             const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
+            const hiddenComments = getHiddenComments();
             let html = '<h3>Comments and Reviews</h3>';
             
             // Add filter controls
@@ -957,12 +1084,18 @@
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
                     const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
                     
+                    const manuallyHiddenKey = `${prIndex}-${idx}`;
+                    const isManuallyHidden = hiddenComments[manuallyHiddenKey];
+                    const manuallyHiddenClass = isManuallyHidden ? 'manually-hidden' : '';
+                    const hideButtonText = isManuallyHidden ? 'Show' : 'Hide';
+                    
                     html += `
-                        <div class="comment-item ${hiddenClass} ${inlineClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
+                        <div class="comment-item ${hiddenClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
                                 <span class="comment-date">${escapeHtml(date)}</span>
+                                <button class="comment-hide-btn" onclick="toggleCommentVisibility(${prIndex}, ${idx})">${hideButtonText}</button>
                             </div>
                             <div class="comment-body">${escapeHtml(comment.body)}</div>
                         </div>
