@@ -477,6 +477,54 @@
             margin-bottom: 15px;
             font-weight: 600;
         }
+        
+        .jump-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0366d6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .jump-to-top:hover {
+            background: #0256c7;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .pr-general-status {
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .pr-general-status.approved-state {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .pr-general-status.mixed-state {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .pr-general-status.no-reviews {
+            background: #f8f9fa;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -528,6 +576,11 @@
         <div id="error-container"></div>
         <div id="pr-data-container"></div>
     </div>
+    
+    <!-- Jump to Top button -->
+    <button class="jump-to-top" onclick="scrollToTop()" title="Jump to top" aria-label="Jump to top">
+        ↑
+    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
     <script>
@@ -540,6 +593,14 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
         
         // Hidden comments management
@@ -709,19 +770,58 @@
             let html = '';
             prs.forEach((pr, index) => {
                 let approvalBadge = '';
+                let generalStatusBadge = '';
+                
                 if (prDataCache && prDataCache[index]) {
                     const prData = prDataCache[index];
+                    
+                    // Calculate general PR status
+                    let approvalCount = 0;
+                    let changesRequestedCount = 0;
                     let viewerApproved = false;
-                    if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
-                        viewerApproved = prData.info.reviews.nodes.some(review => 
-                            review.author.login === prData.viewerLogin && review.state === 'APPROVED'
-                        );
+                    
+                    if (prData.info.reviews && prData.info.reviews.nodes) {
+                        // Count approvals and changes requested
+                        const reviewsByAuthor = {};
+                        prData.info.reviews.nodes.forEach(review => {
+                            // Keep only the latest review from each author
+                            if (!reviewsByAuthor[review.author.login] || 
+                                new Date(review.createdAt) > new Date(reviewsByAuthor[review.author.login].createdAt)) {
+                                reviewsByAuthor[review.author.login] = review;
+                            }
+                        });
+                        
+                        Object.values(reviewsByAuthor).forEach(review => {
+                            if (review.state === 'APPROVED') {
+                                approvalCount++;
+                            } else if (review.state === 'CHANGES_REQUESTED') {
+                                changesRequestedCount++;
+                            }
+                        });
+                        
+                        if (prData.viewerLogin) {
+                            viewerApproved = reviewsByAuthor[prData.viewerLogin]?.state === 'APPROVED';
+                        }
                     }
                     
+                    // User's personal approval status
                     if (viewerApproved) {
                         approvalBadge = '<span class="approval-badge approved">✓ Approved</span>';
                     } else {
                         approvalBadge = '<span class="approval-badge not-approved">Not approved</span>';
+                    }
+                    
+                    // General PR status
+                    if (approvalCount > 0 || changesRequestedCount > 0) {
+                        const approvalText = approvalCount > 0 ? `${approvalCount}✓` : '';
+                        const changesText = changesRequestedCount > 0 ? `${changesRequestedCount}⚠` : '';
+                        const separator = approvalText && changesText ? ' ' : '';
+                        const statusClass = approvalCount > 0 && changesRequestedCount === 0 ? 'approved-state' : 
+                                          (changesRequestedCount > 0 ? 'mixed-state' : 'no-reviews');
+                        
+                        generalStatusBadge = `<span class="pr-general-status ${statusClass}">${approvalText}${separator}${changesText}</span>`;
+                    } else {
+                        generalStatusBadge = '<span class="pr-general-status no-reviews">No reviews</span>';
                     }
                 }
                 
@@ -729,6 +829,7 @@
                     <div class="pr-item">
                         <a href="#pr-${index}">Jump to PR</a>
                         <span>${escapeHtml(pr)}</span>
+                        ${generalStatusBadge}
                         ${approvalBadge}
                         <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
                     </div>

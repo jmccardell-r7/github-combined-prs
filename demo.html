@@ -108,6 +108,48 @@
             border-radius: 4px;
             font-weight: 600;
         }
+        .jump-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0366d6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        .jump-to-top:hover {
+            background: #0256c7;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .pr-general-status {
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .pr-general-status.approved-state {
+            background: #d4edda;
+            color: #155724;
+        }
+        .pr-general-status.mixed-state {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .pr-general-status.no-reviews {
+            background: #f8f9fa;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -127,22 +169,26 @@
             <div class="pr-item">
                 <a href="#pr-0">Jump to PR</a>
                 <span>microsoft/vscode/pull/12345</span>
+                <span class="pr-general-status approved-state">3✓</span>
                 <span class="approval-badge approved">✓ Approved</span>
             </div>
             <div class="pr-item">
                 <a href="#pr-1">Jump to PR</a>
                 <span>facebook/react/pull/67890</span>
+                <span class="pr-general-status mixed-state">2✓ 1⚠</span>
                 <span class="approval-badge not-approved">Not approved</span>
             </div>
             <div class="pr-item">
                 <a href="#pr-2">Jump to PR</a>
                 <span>nodejs/node/pull/11111</span>
+                <span class="pr-general-status no-reviews">No reviews</span>
                 <span class="approval-badge approved">✓ Approved</span>
             </div>
         </div>
         <p style="margin-top: 15px; font-size: 14px; color: #666;">
             ✓ Each PR has a "Jump to PR" link that navigates to the PR section<br>
-            ✓ Approval badges show whether you've approved the PR (green) or not (gray)
+            ✓ General PR status badge shows approvals (✓) and changes requested (⚠)<br>
+            ✓ Personal approval badge shows whether you've approved the PR (green) or not (gray)
         </p>
     </div>
 
@@ -209,13 +255,20 @@
         <h2>Summary of New Features</h2>
         <ol style="line-height: 2;">
             <li><strong>Jump Links:</strong> "Current PRs" list now includes clickable "Jump to PR" links</li>
-            <li><strong>Approval Status:</strong> Visual badges show whether you've approved each PR</li>
+            <li><strong>General PR Status:</strong> Shows approval count and changes requested (e.g., "3✓" or "2✓ 1⚠")</li>
+            <li><strong>Personal Approval Status:</strong> Visual badges show whether you've approved each PR</li>
             <li><strong>PR Status Banner:</strong> Shows overall approval state with count of approvals and changes requested</li>
             <li><strong>Hide Comments:</strong> Each comment has a Hide/Show button for better readability</li>
             <li><strong>Persistent State:</strong> Hidden comments remain hidden across page reloads</li>
             <li><strong>Inline Comments:</strong> "Show inline comments with diffs" is now enabled by default</li>
+            <li><strong>Jump to Top Button:</strong> Fixed button in bottom-right corner to quickly return to top of page</li>
         </ol>
     </div>
+    
+    <!-- Jump to Top button -->
+    <button class="jump-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Jump to top" aria-label="Jump to top">
+        ↑
+    </button>
 
     <script>
         function toggleComment(id) {
