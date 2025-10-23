@@ -924,10 +924,33 @@
 
                 // Check if viewer has approved this PR
                 let viewerApproved = false;
-                if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
-                    viewerApproved = prData.info.reviews.nodes.some(review => 
-                        review.author.login === prData.viewerLogin && review.state === 'APPROVED'
-                    );
+                let prHasApprovals = false;
+                let approvalCount = 0;
+                let changesRequestedCount = 0;
+                
+                if (prData.info.reviews && prData.info.reviews.nodes) {
+                    // Count approvals and changes requested
+                    const reviewsByAuthor = {};
+                    prData.info.reviews.nodes.forEach(review => {
+                        // Keep only the latest review from each author
+                        if (!reviewsByAuthor[review.author.login] || 
+                            new Date(review.createdAt) > new Date(reviewsByAuthor[review.author.login].createdAt)) {
+                            reviewsByAuthor[review.author.login] = review;
+                        }
+                    });
+                    
+                    Object.values(reviewsByAuthor).forEach(review => {
+                        if (review.state === 'APPROVED') {
+                            approvalCount++;
+                            prHasApprovals = true;
+                        } else if (review.state === 'CHANGES_REQUESTED') {
+                            changesRequestedCount++;
+                        }
+                    });
+                    
+                    if (prData.viewerLogin) {
+                        viewerApproved = reviewsByAuthor[prData.viewerLogin]?.state === 'APPROVED';
+                    }
                 }
 
                 const header = document.createElement('div');
@@ -938,8 +961,23 @@
                     approvalBanner = '<div class="user-approval-status" style="margin-bottom: 15px;">✓ You have approved this PR</div>';
                 }
                 
+                // Add overall PR approval state
+                let prStateBanner = '';
+                if (approvalCount > 0 || changesRequestedCount > 0) {
+                    const approvalText = approvalCount > 0 ? `${approvalCount} approval${approvalCount > 1 ? 's' : ''}` : '';
+                    const changesText = changesRequestedCount > 0 ? `${changesRequestedCount} change${changesRequestedCount > 1 ? 's' : ''} requested` : '';
+                    const separator = approvalText && changesText ? ', ' : '';
+                    const stateColor = prHasApprovals && changesRequestedCount === 0 ? '#d4edda' : (changesRequestedCount > 0 ? '#fff3cd' : '#f8f9fa');
+                    const textColor = prHasApprovals && changesRequestedCount === 0 ? '#155724' : (changesRequestedCount > 0 ? '#856404' : '#666');
+                    
+                    prStateBanner = `<div style="background: ${stateColor}; color: ${textColor}; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-weight: 600;">
+                        PR Status: ${approvalText}${separator}${changesText}
+                    </div>`;
+                }
+                
                 header.innerHTML = `
                     <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
+                    ${prStateBanner}
                     ${approvalBanner}
                     <div class="pr-meta">
                         <span><strong>Author:</strong> ${escapeHtml(prData.info.author.login)}</span>
@@ -989,6 +1027,9 @@
                 } catch (error) {
                     diffContainer.innerHTML = `<div class="error">Error rendering diff: ${error.message}</div>`;
                 }
+                
+                // Show inline comments by default since checkbox is checked by default
+                setTimeout(() => toggleInlineComments(index), 100);
             });
         }
         
@@ -1005,7 +1046,7 @@
                         Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
                     </label>
                     <label>
-                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})">
+                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
                         Show inline comments with diffs
                     </label>
                 </div>
