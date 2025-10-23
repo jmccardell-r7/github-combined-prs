@@ -385,6 +385,41 @@
             border-radius: 4px;
             margin-top: 10px;
         }
+        
+        .comment-item.hidden {
+            display: none;
+        }
+        
+        .comments-filter {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f6f8fa;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .comments-filter label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .comments-filter input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .user-approval-status {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -665,6 +700,8 @@
                                             }
                                             body
                                             path
+                                            position
+                                            originalPosition
                                             createdAt
                                         }
                                     }
@@ -677,6 +714,9 @@
 
             const query = `
                 query {
+                    viewer {
+                        login
+                    }
                     ${queries.join('\n')}
                 }
             `;
@@ -700,6 +740,8 @@
                 throw new Error(result.errors[0].message);
             }
 
+            const viewerLogin = result.data.viewer ? result.data.viewer.login : null;
+
             // Fetch diffs for each PR
             const prDataWithDiffs = [];
             for (let i = 0; i < prPaths.length; i++) {
@@ -720,7 +762,8 @@
                     info: prData.pullRequest,
                     diff: diff,
                     owner: owner,
-                    repo: repo
+                    repo: repo,
+                    viewerLogin: viewerLogin
                 });
             }
 
@@ -770,7 +813,7 @@
                 // Comments section
                 const commentsSection = document.createElement('div');
                 commentsSection.className = 'comments-section';
-                commentsSection.innerHTML = renderComments(prData.info, index);
+                commentsSection.innerHTML = renderComments(prData.info, index, prData.viewerLogin);
 
                 // Comment form
                 const commentForm = document.createElement('div');
@@ -806,10 +849,39 @@
             });
         }
         
-        function renderComments(prInfo, prIndex) {
+        function renderComments(prInfo, prIndex, viewerLogin) {
+            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
             let html = '<h3>Comments and Reviews</h3>';
             
+            // Check if viewer has approved this PR
+            let viewerApproved = false;
+            if (viewerLogin && prInfo.reviews && prInfo.reviews.nodes) {
+                viewerApproved = prInfo.reviews.nodes.some(review => 
+                    review.author.login === viewerLogin && review.state === 'APPROVED'
+                );
+            }
+            
+            // Show approval status if viewer has approved
+            if (viewerApproved) {
+                html += `<div class="user-approval-status">✓ You have approved this PR</div>`;
+            }
+            
+            // Add filter controls
+            html += `
+                <div class="comments-filter">
+                    <label>
+                        <input type="checkbox" id="hide-auto-${prIndex}" onchange="toggleHiddenComments(${prIndex})" checked>
+                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})">
+                        Show inline comments with diffs
+                    </label>
+                </div>
+            `;
+            
             const allComments = [];
+            const inlineComments = [];
             
             // Add issue comments
             if (prInfo.comments && prInfo.comments.nodes) {
@@ -818,7 +890,8 @@
                         type: 'comment',
                         author: comment.author.login,
                         body: comment.body,
-                        createdAt: comment.createdAt
+                        createdAt: comment.createdAt,
+                        isHidden: hiddenUsers.includes(comment.author.login)
                     });
                 });
             }
@@ -832,20 +905,26 @@
                             author: review.author.login,
                             body: review.body,
                             state: review.state,
-                            createdAt: review.createdAt
+                            createdAt: review.createdAt,
+                            isHidden: hiddenUsers.includes(review.author.login)
                         });
                     }
                     
                     // Add inline review comments
                     if (review.comments && review.comments.nodes) {
                         review.comments.nodes.forEach(comment => {
-                            allComments.push({
+                            const inlineComment = {
                                 type: 'inline',
                                 author: comment.author.login,
                                 body: comment.body,
                                 path: comment.path,
-                                createdAt: comment.createdAt
-                            });
+                                position: comment.position,
+                                originalPosition: comment.originalPosition,
+                                createdAt: comment.createdAt,
+                                isHidden: hiddenUsers.includes(comment.author.login)
+                            };
+                            allComments.push(inlineComment);
+                            inlineComments.push(inlineComment);
                         });
                     }
                 });
@@ -857,7 +936,8 @@
             if (allComments.length === 0) {
                 html += '<div class="no-comments">No comments yet</div>';
             } else {
-                allComments.forEach(comment => {
+                html += `<div id="comments-list-${prIndex}">`;
+                allComments.forEach((comment, idx) => {
                     const date = new Date(comment.createdAt).toLocaleString();
                     let typeLabel = '';
                     
@@ -867,8 +947,11 @@
                         typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)})</span>`;
                     }
                     
+                    const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
+                    const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
+                    
                     html += `
-                        <div class="comment-item">
+                        <div class="comment-item ${hiddenClass} ${inlineClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
@@ -878,9 +961,102 @@
                         </div>
                     `;
                 });
+                html += '</div>';
             }
             
+            // Store inline comments data for later use
+            if (typeof window.inlineCommentsData === 'undefined') {
+                window.inlineCommentsData = {};
+            }
+            window.inlineCommentsData[prIndex] = inlineComments;
+            
             return html;
+        }
+        
+        function toggleHiddenComments(prIndex) {
+            const checkbox = document.getElementById(`hide-auto-${prIndex}`);
+            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].auto-hidden`);
+            comments.forEach(comment => {
+                if (checkbox.checked) {
+                    comment.classList.add('hidden');
+                } else {
+                    comment.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function toggleInlineComments(prIndex) {
+            const checkbox = document.getElementById(`show-inline-${prIndex}`);
+            const inlineComments = window.inlineCommentsData[prIndex] || [];
+            
+            if (checkbox.checked) {
+                // Show inline comments with diffs - we'll add them to the diff view
+                insertInlineCommentsIntoDiff(prIndex, inlineComments);
+            } else {
+                // Remove inline comments from diff view
+                removeInlineCommentsFromDiff(prIndex);
+            }
+        }
+        
+        function insertInlineCommentsIntoDiff(prIndex, inlineComments) {
+            // Group comments by file path
+            const commentsByFile = {};
+            inlineComments.forEach(comment => {
+                if (!commentsByFile[comment.path]) {
+                    commentsByFile[comment.path] = [];
+                }
+                commentsByFile[comment.path].push(comment);
+            });
+            
+            // Find the diff container
+            const diffContainer = document.getElementById(`diff-${prIndex}`);
+            if (!diffContainer) return;
+            
+            // For each file with comments, try to insert them
+            Object.keys(commentsByFile).forEach(filePath => {
+                const comments = commentsByFile[filePath];
+                
+                // Find the file in the diff view
+                const fileHeaders = diffContainer.querySelectorAll('.d2h-file-header');
+                fileHeaders.forEach(header => {
+                    const fileNameSpan = header.querySelector('.d2h-file-name');
+                    if (fileNameSpan && fileNameSpan.textContent.includes(filePath)) {
+                        // Found the file, add a comment section after the file wrapper
+                        const fileWrapper = header.closest('.d2h-file-wrapper');
+                        if (fileWrapper) {
+                            let commentSection = fileWrapper.querySelector('.inline-comments-section');
+                            if (!commentSection) {
+                                commentSection = document.createElement('div');
+                                commentSection.className = 'inline-comments-section';
+                                commentSection.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin: 10px 0; border-radius: 4px;';
+                                
+                                let commentsHtml = `<strong>💬 Comments on ${escapeHtml(filePath)}:</strong><br>`;
+                                comments.forEach(comment => {
+                                    const date = new Date(comment.createdAt).toLocaleString();
+                                    commentsHtml += `
+                                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                                            <div style="font-weight: 600; margin-bottom: 5px;">
+                                                ${escapeHtml(comment.author)} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
+                                            </div>
+                                            <div style="white-space: pre-wrap;">${escapeHtml(comment.body)}</div>
+                                        </div>
+                                    `;
+                                });
+                                commentSection.innerHTML = commentsHtml;
+                                fileWrapper.appendChild(commentSection);
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        function removeInlineCommentsFromDiff(prIndex) {
+            const diffContainer = document.getElementById(`diff-${prIndex}`);
+            if (!diffContainer) return;
+            
+            const inlineSections = diffContainer.querySelectorAll('.inline-comments-section');
+            inlineSections.forEach(section => section.remove());
         }
         
         async function submitComment(owner, repo, prNumber, prIndex) {
