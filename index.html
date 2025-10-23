@@ -20,7 +20,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -244,6 +244,181 @@
             text-align: center;
             padding: 40px;
             color: #666;
+        }
+        
+        .comments-section {
+            margin-top: 30px;
+            border-top: 2px solid #e1e4e8;
+            padding-top: 20px;
+        }
+        
+        .comments-section h3 {
+            margin-bottom: 15px;
+            color: #24292e;
+        }
+        
+        .comment-item {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .comment-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .comment-date {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .comment-body {
+            line-height: 1.6;
+            color: #24292e;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .comment-form {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .comment-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        
+        .comment-form button {
+            background: #2ea44f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .comment-form button:hover {
+            background: #2c974b;
+        }
+        
+        .comment-form button.approve-btn {
+            background: #0366d6;
+        }
+        
+        .comment-form button.approve-btn:hover {
+            background: #0256c7;
+        }
+        
+        .no-comments {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .action-buttons {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e4e8;
+        }
+        
+        .action-buttons button {
+            background: #0366d6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .action-buttons button:hover {
+            background: #0256c7;
+        }
+        
+        .action-buttons button.approve-btn {
+            background: #2ea44f;
+        }
+        
+        .action-buttons button.approve-btn:hover {
+            background: #2c974b;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .comment-item.hidden {
+            display: none;
+        }
+        
+        .comments-filter {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f6f8fa;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .comments-filter label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .comments-filter input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .user-approval-status {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -500,6 +675,40 @@
                             additions
                             deletions
                             changedFiles
+                            comments(first: 100) {
+                                nodes {
+                                    author {
+                                        login
+                                    }
+                                    body
+                                    createdAt
+                                    updatedAt
+                                }
+                            }
+                            reviews(first: 100) {
+                                nodes {
+                                    author {
+                                        login
+                                    }
+                                    body
+                                    state
+                                    createdAt
+                                    comments(first: 100) {
+                                        nodes {
+                                            author {
+                                                login
+                                            }
+                                            body
+                                            path
+                                            position
+                                            originalPosition
+                                            line
+                                            originalLine
+                                            createdAt
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 `;
@@ -507,6 +716,9 @@
 
             const query = `
                 query {
+                    viewer {
+                        login
+                    }
                     ${queries.join('\n')}
                 }
             `;
@@ -530,6 +742,8 @@
                 throw new Error(result.errors[0].message);
             }
 
+            const viewerLogin = result.data.viewer ? result.data.viewer.login : null;
+
             // Fetch diffs for each PR
             const prDataWithDiffs = [];
             for (let i = 0; i < prPaths.length; i++) {
@@ -550,7 +764,8 @@
                     info: prData.pullRequest,
                     diff: diff,
                     owner: owner,
-                    repo: repo
+                    repo: repo,
+                    viewerLogin: viewerLogin
                 });
             }
 
@@ -581,10 +796,25 @@
                 section.className = 'pr-section';
                 section.id = `pr-${index}`;
 
+                // Check if viewer has approved this PR
+                let viewerApproved = false;
+                if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
+                    viewerApproved = prData.info.reviews.nodes.some(review => 
+                        review.author.login === prData.viewerLogin && review.state === 'APPROVED'
+                    );
+                }
+
                 const header = document.createElement('div');
                 header.className = 'pr-header';
+                
+                let approvalBanner = '';
+                if (viewerApproved) {
+                    approvalBanner = '<div class="user-approval-status" style="margin-bottom: 15px;">✓ You have approved this PR</div>';
+                }
+                
                 header.innerHTML = `
                     <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
+                    ${approvalBanner}
                     <div class="pr-meta">
                         <span><strong>Author:</strong> ${escapeHtml(prData.info.author.login)}</span>
                         <span><strong>State:</strong> ${escapeHtml(prData.info.state)}</span>
@@ -597,8 +827,26 @@
                 diffContainer.className = 'diff-container';
                 diffContainer.id = `diff-${index}`;
 
+                // Comments section
+                const commentsSection = document.createElement('div');
+                commentsSection.className = 'comments-section';
+                commentsSection.innerHTML = renderComments(prData.info, index, prData.viewerLogin);
+
+                // Comment form
+                const commentForm = document.createElement('div');
+                commentForm.className = 'comment-form';
+                commentForm.innerHTML = `
+                    <h4>Add a comment</h4>
+                    <textarea id="comment-text-${index}" placeholder="Leave a comment..."></textarea>
+                    <div id="comment-status-${index}"></div>
+                    <button onclick="submitComment('${escapeHtml(prData.owner)}', '${escapeHtml(prData.repo)}', ${prData.info.number}, ${index})">Comment</button>
+                    <button class="approve-btn" onclick="approvePR('${escapeHtml(prData.owner)}', '${escapeHtml(prData.repo)}', ${prData.info.number}, ${index})">Approve PR</button>
+                `;
+
                 section.appendChild(header);
                 section.appendChild(diffContainer);
+                section.appendChild(commentsSection);
+                section.appendChild(commentForm);
                 container.appendChild(section);
 
                 // Render diff using diff2html
@@ -616,6 +864,292 @@
                     diffContainer.innerHTML = `<div class="error">Error rendering diff: ${error.message}</div>`;
                 }
             });
+        }
+        
+        function renderComments(prInfo, prIndex, viewerLogin) {
+            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
+            let html = '<h3>Comments and Reviews</h3>';
+            
+            // Add filter controls
+            html += `
+                <div class="comments-filter">
+                    <label>
+                        <input type="checkbox" id="hide-auto-${prIndex}" onchange="toggleHiddenComments(${prIndex})" checked>
+                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})">
+                        Show inline comments with diffs
+                    </label>
+                </div>
+            `;
+            
+            const allComments = [];
+            const inlineComments = [];
+            
+            // Add issue comments
+            if (prInfo.comments && prInfo.comments.nodes) {
+                prInfo.comments.nodes.forEach(comment => {
+                    allComments.push({
+                        type: 'comment',
+                        author: comment.author.login,
+                        body: comment.body,
+                        createdAt: comment.createdAt,
+                        isHidden: hiddenUsers.includes(comment.author.login)
+                    });
+                });
+            }
+            
+            // Add review comments
+            if (prInfo.reviews && prInfo.reviews.nodes) {
+                prInfo.reviews.nodes.forEach(review => {
+                    if (review.body) {
+                        allComments.push({
+                            type: 'review',
+                            author: review.author.login,
+                            body: review.body,
+                            state: review.state,
+                            createdAt: review.createdAt,
+                            isHidden: hiddenUsers.includes(review.author.login)
+                        });
+                    }
+                    
+                    // Add inline review comments
+                    if (review.comments && review.comments.nodes) {
+                        review.comments.nodes.forEach(comment => {
+                            const inlineComment = {
+                                type: 'inline',
+                                author: comment.author.login,
+                                body: comment.body,
+                                path: comment.path,
+                                position: comment.position,
+                                originalPosition: comment.originalPosition,
+                                line: comment.line,
+                                originalLine: comment.originalLine,
+                                createdAt: comment.createdAt,
+                                isHidden: hiddenUsers.includes(comment.author.login)
+                            };
+                            allComments.push(inlineComment);
+                            inlineComments.push(inlineComment);
+                        });
+                    }
+                });
+            }
+            
+            // Sort by date
+            allComments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            
+            if (allComments.length === 0) {
+                html += '<div class="no-comments">No comments yet</div>';
+            } else {
+                html += `<div id="comments-list-${prIndex}">`;
+                allComments.forEach((comment, idx) => {
+                    const date = new Date(comment.createdAt).toLocaleString();
+                    let typeLabel = '';
+                    
+                    if (comment.type === 'review') {
+                        typeLabel = ` <span style="color: #0366d6; font-weight: 600;">[${comment.state}]</span>`;
+                    } else if (comment.type === 'inline') {
+                        const lineInfo = comment.line ? `:${comment.line}` : '';
+                        typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)}${lineInfo})</span>`;
+                    }
+                    
+                    const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
+                    const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
+                    
+                    html += `
+                        <div class="comment-item ${hiddenClass} ${inlineClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
+                            <div class="comment-header">
+                                <span class="comment-author">${escapeHtml(comment.author)}</span>
+                                ${typeLabel}
+                                <span class="comment-date">${escapeHtml(date)}</span>
+                            </div>
+                            <div class="comment-body">${escapeHtml(comment.body)}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            // Store inline comments data for later use
+            if (typeof window.inlineCommentsData === 'undefined') {
+                window.inlineCommentsData = {};
+            }
+            window.inlineCommentsData[prIndex] = inlineComments;
+            
+            return html;
+        }
+        
+        function toggleHiddenComments(prIndex) {
+            const checkbox = document.getElementById(`hide-auto-${prIndex}`);
+            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].auto-hidden`);
+            comments.forEach(comment => {
+                if (checkbox.checked) {
+                    comment.classList.add('hidden');
+                } else {
+                    comment.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function toggleInlineComments(prIndex) {
+            const checkbox = document.getElementById(`show-inline-${prIndex}`);
+            const inlineComments = window.inlineCommentsData[prIndex] || [];
+            
+            if (checkbox.checked) {
+                // Show inline comments with diffs - we'll add them to the diff view
+                insertInlineCommentsIntoDiff(prIndex, inlineComments);
+            } else {
+                // Remove inline comments from diff view
+                removeInlineCommentsFromDiff(prIndex);
+            }
+        }
+        
+        function insertInlineCommentsIntoDiff(prIndex, inlineComments) {
+            // Group comments by file path
+            const commentsByFile = {};
+            inlineComments.forEach(comment => {
+                if (!commentsByFile[comment.path]) {
+                    commentsByFile[comment.path] = [];
+                }
+                commentsByFile[comment.path].push(comment);
+            });
+            
+            // Find the diff container
+            const diffContainer = document.getElementById(`diff-${prIndex}`);
+            if (!diffContainer) return;
+            
+            // For each file with comments, try to insert them
+            Object.keys(commentsByFile).forEach(filePath => {
+                const comments = commentsByFile[filePath];
+                
+                // Find the file in the diff view
+                const fileHeaders = diffContainer.querySelectorAll('.d2h-file-header');
+                fileHeaders.forEach(header => {
+                    const fileNameSpan = header.querySelector('.d2h-file-name');
+                    if (fileNameSpan && fileNameSpan.textContent.includes(filePath)) {
+                        // Found the file, add a comment section after the file wrapper
+                        const fileWrapper = header.closest('.d2h-file-wrapper');
+                        if (fileWrapper) {
+                            let commentSection = fileWrapper.querySelector('.inline-comments-section');
+                            if (!commentSection) {
+                                commentSection = document.createElement('div');
+                                commentSection.className = 'inline-comments-section';
+                                commentSection.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin: 10px 0; border-radius: 4px;';
+                                
+                                let commentsHtml = `<strong>💬 Comments on ${escapeHtml(filePath)}:</strong><br>`;
+                                comments.forEach(comment => {
+                                    const date = new Date(comment.createdAt).toLocaleString();
+                                    const lineInfo = comment.line ? ` on line ${comment.line}` : '';
+                                    commentsHtml += `
+                                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                                            <div style="font-weight: 600; margin-bottom: 5px;">
+                                                ${escapeHtml(comment.author)}${lineInfo} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
+                                            </div>
+                                            <div style="white-space: pre-wrap;">${escapeHtml(comment.body)}</div>
+                                        </div>
+                                    `;
+                                });
+                                commentSection.innerHTML = commentsHtml;
+                                fileWrapper.appendChild(commentSection);
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        function removeInlineCommentsFromDiff(prIndex) {
+            const diffContainer = document.getElementById(`diff-${prIndex}`);
+            if (!diffContainer) return;
+            
+            const inlineSections = diffContainer.querySelectorAll('.inline-comments-section');
+            inlineSections.forEach(section => section.remove());
+        }
+        
+        async function submitComment(owner, repo, prNumber, prIndex) {
+            const pat = getPAT();
+            if (!pat) {
+                showCommentStatus(prIndex, 'Please save your GitHub PAT first', 'error');
+                return;
+            }
+            
+            const commentText = document.getElementById(`comment-text-${prIndex}`).value.trim();
+            if (!commentText) {
+                showCommentStatus(prIndex, 'Please enter a comment', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${pat}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        body: commentText
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || `Failed to post comment: ${response.status}`);
+                }
+                
+                document.getElementById(`comment-text-${prIndex}`).value = '';
+                showCommentStatus(prIndex, 'Comment posted successfully! Reload to see it.', 'success');
+            } catch (error) {
+                showCommentStatus(prIndex, `Error posting comment: ${error.message}`, 'error');
+            }
+        }
+        
+        async function approvePR(owner, repo, prNumber, prIndex) {
+            const pat = getPAT();
+            if (!pat) {
+                showCommentStatus(prIndex, 'Please save your GitHub PAT first', 'error');
+                return;
+            }
+            
+            const commentText = document.getElementById(`comment-text-${prIndex}`).value.trim();
+            
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${pat}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        event: 'APPROVE',
+                        body: commentText || 'Approved via GitHub PR Combiner'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || `Failed to approve PR: ${response.status}`);
+                }
+                
+                document.getElementById(`comment-text-${prIndex}`).value = '';
+                showCommentStatus(prIndex, 'PR approved successfully! Reload to see the review.', 'success');
+            } catch (error) {
+                showCommentStatus(prIndex, `Error approving PR: ${error.message}`, 'error');
+            }
+        }
+        
+        function showCommentStatus(prIndex, message, type) {
+            const statusDiv = document.getElementById(`comment-status-${prIndex}`);
+            statusDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            statusDiv.textContent = message;
+            
+            // Clear the message after 5 seconds
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 5000);
         }
 
         function showError(message) {

@@ -9,6 +9,9 @@ A static site to combine and review multiple GitHub Pull Requests at once.
 - 📝 **Easy PR Management**: Add PRs via URL or simple path format (owner/repo/pull/123)
 - ⚡ **Efficient Data Fetching**: Uses GitHub GraphQL API with aliases to fetch all PR data in a single request
 - 🎨 **Beautiful Diffs**: Renders all file changes using diff2html with side-by-side view
+- 💬 **Comments & Reviews**: View all PR comments, reviews, and inline code comments in one place
+- ✍️ **Add Comments**: Post new comments directly from the interface
+- ✅ **PR Approvals**: Approve pull requests with a single click
 
 ## Usage
 
@@ -30,6 +33,9 @@ A static site to combine and review multiple GitHub Pull Requests at once.
    - Click "Load PRs" to fetch all PR data from GitHub
    - View PR details, metadata, and full file diffs
    - Diffs are rendered in a side-by-side format
+   - Read comments and reviews from collaborators
+   - Add your own comments using the comment box
+   - Approve PRs with the "Approve PR" button
 
 5. **Share**:
    - Copy the URL from your browser to share your PR list with others
@@ -42,6 +48,23 @@ http://your-site.com/?prs=owner/repo/pull/1,owner2/repo2/pull/2
 ```
 
 The `prs` query parameter contains a comma-separated list of PR paths.
+
+## Comments and Approvals
+
+The application displays all comments and reviews associated with each PR:
+
+- **Issue Comments**: General comments on the PR
+- **Review Comments**: Code review feedback with approval state (APPROVED, CHANGES_REQUESTED, etc.)
+- **Inline Comments**: Comments on specific lines of code, shown with the file path
+
+You can interact with PRs directly from the interface:
+
+- **Add Comments**: Use the text area below each PR to post new comments
+- **Approve PRs**: Click the "Approve PR" button to submit an approval review
+  - You can include an optional comment with your approval
+  - The default message is "Approved via GitHub PR Combiner" if no comment is provided
+
+**Note**: Your GitHub PAT must have `repo` scope to post comments and approve PRs.
 
 ## Requirements
 
