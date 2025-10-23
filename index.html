@@ -167,6 +167,37 @@
             font-size: 14px;
         }
         
+        .pr-item a {
+            margin-right: 10px;
+            color: #0366d6;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .pr-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .pr-item .approval-badge {
+            margin-left: 10px;
+            margin-right: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .pr-item .approval-badge.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .pr-item .approval-badge.not-approved {
+            background: #f8f9fa;
+            color: #666;
+        }
+        
         .pr-item button {
             background: #d73a49;
             color: white;
@@ -263,6 +294,7 @@
             border-radius: 6px;
             padding: 15px;
             margin-bottom: 15px;
+            position: relative;
         }
         
         .comment-header {
@@ -280,6 +312,22 @@
         .comment-date {
             color: #666;
             font-size: 12px;
+            flex: 1;
+        }
+        
+        .comment-hide-btn {
+            background: #6a737d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        
+        .comment-hide-btn:hover {
+            background: #586069;
         }
         
         .comment-body {
@@ -390,6 +438,15 @@
             display: none;
         }
         
+        .comment-item.manually-hidden .comment-body {
+            display: none;
+        }
+        
+        .comment-item.manually-hidden {
+            background: #f1f3f5;
+            padding: 10px 15px;
+        }
+        
         .comments-filter {
             margin-bottom: 15px;
             padding: 10px;
@@ -419,6 +476,78 @@
             border-radius: 4px;
             margin-bottom: 15px;
             font-weight: 600;
+        }
+        
+        .jump-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0366d6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .jump-to-top:hover {
+            background: #0256c7;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .pr-general-status {
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .pr-general-status.approved-state {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .pr-general-status.mixed-state {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .pr-general-status.no-reviews {
+            background: #f8f9fa;
+            color: #666;
+        }
+        
+        .pr-state-badge {
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .pr-state-badge.open {
+            background: #dcffe4;
+            color: #0e6027;
+        }
+        
+        .pr-state-badge.merged {
+            background: #e1e4e8;
+            color: #6a737d;
+        }
+        
+        .pr-state-badge.closed {
+            background: #ffeef0;
+            color: #d73a49;
         }
     </style>
 </head>
@@ -471,16 +600,67 @@
         <div id="error-container"></div>
         <div id="pr-data-container"></div>
     </div>
+    
+    <!-- Jump to Top button -->
+    <button class="jump-to-top" onclick="scrollToTop()" title="Jump to top" aria-label="Jump to top">
+        ↑
+    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
     <script>
         const PAT_KEY = 'github_pat';
+        const HIDDEN_COMMENTS_KEY = 'hidden_comments';
+        let prDataCache = null;
         
         // Security: HTML escape function to prevent XSS
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // Scroll to top function
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Hidden comments management
+        function getHiddenComments() {
+            const stored = localStorage.getItem(HIDDEN_COMMENTS_KEY);
+            return stored ? JSON.parse(stored) : {};
+        }
+        
+        function saveHiddenComments(hiddenComments) {
+            localStorage.setItem(HIDDEN_COMMENTS_KEY, JSON.stringify(hiddenComments));
+        }
+        
+        function toggleCommentVisibility(prIndex, commentIndex) {
+            const hiddenComments = getHiddenComments();
+            const key = `${prIndex}-${commentIndex}`;
+            
+            if (hiddenComments[key]) {
+                delete hiddenComments[key];
+            } else {
+                hiddenComments[key] = true;
+            }
+            
+            saveHiddenComments(hiddenComments);
+            
+            // Update UI
+            const commentElement = document.querySelector(`[data-pr-index="${prIndex}"][data-comment-index="${commentIndex}"]`);
+            if (commentElement) {
+                const hideBtn = commentElement.querySelector('.comment-hide-btn');
+                if (hiddenComments[key]) {
+                    commentElement.classList.add('manually-hidden');
+                    hideBtn.textContent = 'Show';
+                } else {
+                    commentElement.classList.remove('manually-hidden');
+                    hideBtn.textContent = 'Hide';
+                }
+            }
         }
         
         // Initialize on page load
@@ -610,12 +790,83 @@
                 return;
             }
 
-            container.innerHTML = prs.map(pr => `
-                <div class="pr-item">
-                    <span>${escapeHtml(pr)}</span>
-                    <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
-                </div>
-            `).join('');
+            // If we have cached PR data, show approval status
+            let html = '';
+            prs.forEach((pr, index) => {
+                let approvalBadge = '';
+                let generalStatusBadge = '';
+                let stateBadge = '';
+                
+                if (prDataCache && prDataCache[index]) {
+                    const prData = prDataCache[index];
+                    
+                    // PR State badge
+                    const state = prData.info.state.toLowerCase();
+                    stateBadge = `<span class="pr-state-badge ${state}">${prData.info.state}</span>`;
+                    
+                    // Calculate general PR status
+                    let approvalCount = 0;
+                    let changesRequestedCount = 0;
+                    let viewerApproved = false;
+                    
+                    if (prData.info.reviews && prData.info.reviews.nodes) {
+                        // Count approvals and changes requested
+                        const reviewsByAuthor = {};
+                        prData.info.reviews.nodes.forEach(review => {
+                            // Keep only the latest review from each author
+                            if (!reviewsByAuthor[review.author.login] || 
+                                new Date(review.createdAt) > new Date(reviewsByAuthor[review.author.login].createdAt)) {
+                                reviewsByAuthor[review.author.login] = review;
+                            }
+                        });
+                        
+                        Object.values(reviewsByAuthor).forEach(review => {
+                            if (review.state === 'APPROVED') {
+                                approvalCount++;
+                            } else if (review.state === 'CHANGES_REQUESTED') {
+                                changesRequestedCount++;
+                            }
+                        });
+                        
+                        if (prData.viewerLogin) {
+                            viewerApproved = reviewsByAuthor[prData.viewerLogin]?.state === 'APPROVED';
+                        }
+                    }
+                    
+                    // User's personal approval status
+                    if (viewerApproved) {
+                        approvalBadge = '<span class="approval-badge approved">✓ Approved</span>';
+                    } else {
+                        approvalBadge = '<span class="approval-badge not-approved">Not approved</span>';
+                    }
+                    
+                    // General PR status
+                    if (approvalCount > 0 || changesRequestedCount > 0) {
+                        const approvalText = approvalCount > 0 ? `${approvalCount}✓` : '';
+                        const changesText = changesRequestedCount > 0 ? `${changesRequestedCount}⚠` : '';
+                        const separator = approvalText && changesText ? ' ' : '';
+                        const statusClass = approvalCount > 0 && changesRequestedCount === 0 ? 'approved-state' : 
+                                          (changesRequestedCount > 0 ? 'mixed-state' : 'no-reviews');
+                        
+                        generalStatusBadge = `<span class="pr-general-status ${statusClass}">${approvalText}${separator}${changesText}</span>`;
+                    } else {
+                        generalStatusBadge = '<span class="pr-general-status no-reviews">No reviews</span>';
+                    }
+                }
+                
+                html += `
+                    <div class="pr-item">
+                        <a href="#pr-${index}">Jump to PR</a>
+                        <span>${escapeHtml(pr)}</span>
+                        ${stateBadge}
+                        ${generalStatusBadge}
+                        ${approvalBadge}
+                        <button onclick="removePR('${escapeHtml(pr)}')">Remove</button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
 
         function loadPRsFromURL() {
@@ -790,6 +1041,12 @@
         function renderPRData(prDataArray) {
             const container = document.getElementById('pr-data-container');
             container.innerHTML = '';
+            
+            // Cache the PR data for use in the PR list
+            prDataCache = prDataArray;
+            
+            // Re-render the PR list to show approval status
+            renderPRList();
 
             prDataArray.forEach((prData, index) => {
                 const section = document.createElement('div');
@@ -798,10 +1055,33 @@
 
                 // Check if viewer has approved this PR
                 let viewerApproved = false;
-                if (prData.viewerLogin && prData.info.reviews && prData.info.reviews.nodes) {
-                    viewerApproved = prData.info.reviews.nodes.some(review => 
-                        review.author.login === prData.viewerLogin && review.state === 'APPROVED'
-                    );
+                let prHasApprovals = false;
+                let approvalCount = 0;
+                let changesRequestedCount = 0;
+                
+                if (prData.info.reviews && prData.info.reviews.nodes) {
+                    // Count approvals and changes requested
+                    const reviewsByAuthor = {};
+                    prData.info.reviews.nodes.forEach(review => {
+                        // Keep only the latest review from each author
+                        if (!reviewsByAuthor[review.author.login] || 
+                            new Date(review.createdAt) > new Date(reviewsByAuthor[review.author.login].createdAt)) {
+                            reviewsByAuthor[review.author.login] = review;
+                        }
+                    });
+                    
+                    Object.values(reviewsByAuthor).forEach(review => {
+                        if (review.state === 'APPROVED') {
+                            approvalCount++;
+                            prHasApprovals = true;
+                        } else if (review.state === 'CHANGES_REQUESTED') {
+                            changesRequestedCount++;
+                        }
+                    });
+                    
+                    if (prData.viewerLogin) {
+                        viewerApproved = reviewsByAuthor[prData.viewerLogin]?.state === 'APPROVED';
+                    }
                 }
 
                 const header = document.createElement('div');
@@ -812,8 +1092,23 @@
                     approvalBanner = '<div class="user-approval-status" style="margin-bottom: 15px;">✓ You have approved this PR</div>';
                 }
                 
+                // Add overall PR approval state
+                let prStateBanner = '';
+                if (approvalCount > 0 || changesRequestedCount > 0) {
+                    const approvalText = approvalCount > 0 ? `${approvalCount} approval${approvalCount > 1 ? 's' : ''}` : '';
+                    const changesText = changesRequestedCount > 0 ? `${changesRequestedCount} change${changesRequestedCount > 1 ? 's' : ''} requested` : '';
+                    const separator = approvalText && changesText ? ', ' : '';
+                    const stateColor = prHasApprovals && changesRequestedCount === 0 ? '#d4edda' : (changesRequestedCount > 0 ? '#fff3cd' : '#f8f9fa');
+                    const textColor = prHasApprovals && changesRequestedCount === 0 ? '#155724' : (changesRequestedCount > 0 ? '#856404' : '#666');
+                    
+                    prStateBanner = `<div style="background: ${stateColor}; color: ${textColor}; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-weight: 600;">
+                        PR Status: ${approvalText}${separator}${changesText}
+                    </div>`;
+                }
+                
                 header.innerHTML = `
                     <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
+                    ${prStateBanner}
                     ${approvalBanner}
                     <div class="pr-meta">
                         <span><strong>Author:</strong> ${escapeHtml(prData.info.author.login)}</span>
@@ -863,11 +1158,15 @@
                 } catch (error) {
                     diffContainer.innerHTML = `<div class="error">Error rendering diff: ${error.message}</div>`;
                 }
+                
+                // Show inline comments by default since checkbox is checked by default
+                setTimeout(() => toggleInlineComments(index), 100);
             });
         }
         
         function renderComments(prInfo, prIndex, viewerLogin) {
             const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
+            const hiddenComments = getHiddenComments();
             let html = '<h3>Comments and Reviews</h3>';
             
             // Add filter controls
@@ -878,7 +1177,7 @@
                         Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
                     </label>
                     <label>
-                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})">
+                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
                         Show inline comments with diffs
                     </label>
                 </div>
@@ -957,12 +1256,18 @@
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
                     const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
                     
+                    const manuallyHiddenKey = `${prIndex}-${idx}`;
+                    const isManuallyHidden = hiddenComments[manuallyHiddenKey];
+                    const manuallyHiddenClass = isManuallyHidden ? 'manually-hidden' : '';
+                    const hideButtonText = isManuallyHidden ? 'Show' : 'Hide';
+                    
                     html += `
-                        <div class="comment-item ${hiddenClass} ${inlineClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
+                        <div class="comment-item ${hiddenClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
                                 <span class="comment-date">${escapeHtml(date)}</span>
+                                <button class="comment-hide-btn" onclick="toggleCommentVisibility(${prIndex}, ${idx})">${hideButtonText}</button>
                             </div>
                             <div class="comment-body">${escapeHtml(comment.body)}</div>
                         </div>
