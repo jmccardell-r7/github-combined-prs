@@ -565,11 +565,11 @@
         /* File Explorer Styles */
         .file-explorer {
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: none; /* Hidden until PRs are loaded */
-            width: 350px;
+            width: 280px;
             flex-shrink: 0;
             position: sticky;
             top: 20px;
@@ -582,7 +582,7 @@
         .file-explorer h2 {
             margin-bottom: 15px;
             color: #24292e;
-            font-size: 18px;
+            font-size: 16px;
         }
         
         .file-explorer-content {
@@ -708,6 +708,51 @@
             color: #666;
             font-weight: 600;
         }
+        
+        /* PR selector for file explorer */
+        .pr-selector {
+            margin-bottom: 15px;
+        }
+        
+        .pr-selector-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .pr-tab {
+            padding: 5px 10px;
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .pr-tab:hover {
+            background: #e1e4e8;
+        }
+        
+        .pr-tab.active {
+            background: #0366d6;
+            color: white;
+            border-color: #0366d6;
+        }
+        
+        .pr-file-tree {
+            display: none;
+        }
+        
+        .pr-file-tree.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -755,6 +800,9 @@
         <div class="main-content-wrapper">
             <div id="file-explorer" class="file-explorer">
                 <h2>📁 Files</h2>
+                <div class="pr-selector">
+                    <div id="pr-selector-tabs" class="pr-selector-tabs"></div>
+                </div>
                 <div class="file-stats">
                     <div class="file-stat-item">
                         <span class="file-stat-label">Files:</span>
@@ -764,13 +812,8 @@
                         <span class="file-stat-label">Dirs:</span>
                         <span class="file-stat-value" id="total-dirs-count">0</span>
                     </div>
-                    <div class="file-stat-item">
-                        <span class="file-stat-label">PRs:</span>
-                        <span class="file-stat-value" id="total-prs-count">0</span>
-                    </div>
                 </div>
-                <div class="file-explorer-content">
-                    <ul id="file-tree" class="file-tree"></ul>
+                <div class="file-explorer-content" id="file-explorer-content">
                 </div>
             </div>
 
@@ -1352,28 +1395,83 @@
         }
         
         function buildFileExplorer(prDataArray) {
-            // Extract all files from all PRs
-            const fileMap = new Map(); // Map of file path -> array of PR indices
+            const explorerContent = document.getElementById('file-explorer-content');
+            const tabsContainer = document.getElementById('pr-selector-tabs');
             
+            explorerContent.innerHTML = '';
+            tabsContainer.innerHTML = '';
+            
+            // Build separate file tree for each PR
             prDataArray.forEach((prData, prIndex) => {
-                // Parse the diff to extract file paths
+                // Create tab for this PR
+                const tab = document.createElement('div');
+                tab.className = 'pr-tab' + (prIndex === 0 ? ' active' : '');
+                tab.textContent = `PR #${prData.info.number}`;
+                tab.title = prData.info.title;
+                tab.onclick = () => switchPRTab(prIndex);
+                tabsContainer.appendChild(tab);
+                
+                // Extract files from this PR's diff
                 const files = extractFilesFromDiff(prData.diff);
+                const fileMap = new Map();
                 files.forEach(filePath => {
-                    if (!fileMap.has(filePath)) {
-                        fileMap.set(filePath, []);
-                    }
-                    fileMap.get(filePath).push(prIndex);
+                    fileMap.set(filePath, [prIndex]);
                 });
+                
+                // Build directory tree for this PR
+                const tree = buildDirectoryTree(fileMap);
+                
+                // Create container for this PR's file tree
+                const treeContainer = document.createElement('div');
+                treeContainer.className = 'pr-file-tree' + (prIndex === 0 ? ' active' : '');
+                treeContainer.id = `pr-tree-${prIndex}`;
+                
+                const treeList = document.createElement('ul');
+                treeList.className = 'file-tree';
+                
+                // Render tree
+                renderTreeNode(tree, treeList, fileMap, '', prIndex);
+                
+                treeContainer.appendChild(treeList);
+                explorerContent.appendChild(treeContainer);
             });
             
-            // Build directory tree structure
-            const tree = buildDirectoryTree(fileMap);
-            
-            // Render the file tree
-            renderFileTree(tree, fileMap, prDataArray.length);
+            // Update stats for the first PR (active by default)
+            updateFileStats(0, prDataArray);
             
             // Show the file explorer
             document.getElementById('file-explorer').style.display = 'flex';
+        }
+        
+        function switchPRTab(prIndex) {
+            // Update tabs
+            const tabs = document.querySelectorAll('.pr-tab');
+            tabs.forEach((tab, index) => {
+                tab.classList.toggle('active', index === prIndex);
+            });
+            
+            // Update trees
+            const trees = document.querySelectorAll('.pr-file-tree');
+            trees.forEach((tree, index) => {
+                tree.classList.toggle('active', index === prIndex);
+            });
+            
+            // Update stats
+            updateFileStats(prIndex, prDataCache);
+        }
+        
+        function updateFileStats(prIndex, prDataArray) {
+            if (!prDataArray || !prDataArray[prIndex]) return;
+            
+            const files = extractFilesFromDiff(prDataArray[prIndex].diff);
+            const fileMap = new Map();
+            files.forEach(filePath => {
+                fileMap.set(filePath, [prIndex]);
+            });
+            const tree = buildDirectoryTree(fileMap);
+            
+            document.getElementById('total-files-count').textContent = fileMap.size;
+            document.getElementById('total-dirs-count').textContent = countDirectories(tree);
         }
         
         function extractFilesFromDiff(diffText) {
@@ -1424,23 +1522,6 @@
             return tree;
         }
         
-        function renderFileTree(tree, fileMap, totalPRs) {
-            const fileTreeElement = document.getElementById('file-tree');
-            fileTreeElement.innerHTML = '';
-            
-            // Count total files and directories
-            let totalFiles = fileMap.size;
-            let totalDirs = countDirectories(tree);
-            
-            // Update stats
-            document.getElementById('total-files-count').textContent = totalFiles;
-            document.getElementById('total-dirs-count').textContent = totalDirs;
-            document.getElementById('total-prs-count').textContent = totalPRs;
-            
-            // Render root level
-            renderTreeNode(tree, fileTreeElement, fileMap, '');
-        }
-        
         function countDirectories(tree, count = 0) {
             for (let key in tree) {
                 if (key !== '_files') {
@@ -1451,7 +1532,7 @@
             return count;
         }
         
-        function renderTreeNode(node, parentElement, fileMap, currentPath) {
+        function renderTreeNode(node, parentElement, fileMap, currentPath, prIndex) {
             // Get directories and files
             const directories = [];
             const files = node._files || [];
@@ -1486,7 +1567,7 @@
                 
                 const childrenUl = document.createElement('ul');
                 childrenUl.className = 'file-tree-folder-children';
-                renderTreeNode(node[dir], childrenUl, fileMap, dirPath);
+                renderTreeNode(node[dir], childrenUl, fileMap, dirPath, prIndex);
                 li.appendChild(childrenUl);
                 
                 parentElement.appendChild(li);
@@ -1495,27 +1576,20 @@
             // Render files
             files.sort().forEach(filePath => {
                 const fileName = filePath.split('/').pop();
-                const prIndices = fileMap.get(filePath) || [];
                 
                 const li = document.createElement('li');
                 li.className = 'file-tree-file';
                 
-                let badge = '';
-                if (prIndices.length > 1) {
-                    badge = `<span class="file-tree-file-badge">${prIndices.length} PRs</span>`;
-                }
-                
                 li.innerHTML = `
                     <span class="file-tree-file-icon">📄</span>
                     <span class="file-tree-file-name">${escapeHtml(fileName)}</span>
-                    ${badge}
                 `;
                 
                 li.onclick = function() {
-                    navigateToFile(filePath, prIndices[0]);
+                    navigateToFile(filePath, prIndex);
                 };
                 
-                li.title = `${filePath} - Click to view in PR #${prIndices[0]}`;
+                li.title = `${filePath} - Click to view in PR`;
                 
                 parentElement.appendChild(li);
             });
