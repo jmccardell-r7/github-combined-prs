@@ -450,6 +450,10 @@
             display: none;
         }
         
+        .comment-item.minimized-comment {
+            /* Will be hidden by default but can be shown via toggle */
+        }
+        
         .comment-item.manually-hidden .comment-body {
             display: none;
         }
@@ -1161,6 +1165,8 @@
                                     body
                                     createdAt
                                     updatedAt
+                                    isMinimized
+                                    minimizedReason
                                 }
                             }
                             reviews(first: 100) {
@@ -1183,6 +1189,8 @@
                                             line
                                             originalLine
                                             createdAt
+                                            isMinimized
+                                            minimizedReason
                                         }
                                     }
                                 }
@@ -1665,6 +1673,10 @@
                         Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
                     </label>
                     <label>
+                        <input type="checkbox" id="hide-minimized-${prIndex}" onchange="toggleMinimizedComments(${prIndex})" checked>
+                        Hide minimized comments
+                    </label>
+                    <label>
                         <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
                         Show inline comments with diffs
                     </label>
@@ -1682,7 +1694,9 @@
                         author: comment.author.login,
                         body: comment.body,
                         createdAt: comment.createdAt,
-                        isHidden: hiddenUsers.includes(comment.author.login)
+                        isHidden: hiddenUsers.includes(comment.author.login),
+                        isMinimized: comment.isMinimized || false,
+                        minimizedReason: comment.minimizedReason || null
                     });
                 });
             }
@@ -1714,7 +1728,9 @@
                                 line: comment.line,
                                 originalLine: comment.originalLine,
                                 createdAt: comment.createdAt,
-                                isHidden: hiddenUsers.includes(comment.author.login)
+                                isHidden: hiddenUsers.includes(comment.author.login),
+                                isMinimized: comment.isMinimized || false,
+                                minimizedReason: comment.minimizedReason || null
                             };
                             allComments.push(inlineComment);
                             inlineComments.push(inlineComment);
@@ -1742,6 +1758,7 @@
                     }
                     
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
+                    const minimizedClass = comment.isMinimized ? 'hidden minimized-comment' : '';
                     const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
                     
                     const manuallyHiddenKey = `${prIndex}-${idx}`;
@@ -1749,11 +1766,19 @@
                     const manuallyHiddenClass = isManuallyHidden ? 'manually-hidden' : '';
                     const hideButtonText = isManuallyHidden ? 'Show' : 'Hide';
                     
+                    // Add minimized indicator to type label if comment is minimized
+                    let minimizedIndicator = '';
+                    if (comment.isMinimized) {
+                        const reason = comment.minimizedReason ? ` (${comment.minimizedReason})` : '';
+                        minimizedIndicator = ` <span style="color: #999; font-size: 11px; font-weight: 600;">[MINIMIZED${escapeHtml(reason)}]</span>`;
+                    }
+                    
                     html += `
-                        <div class="comment-item ${hiddenClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
+                        <div class="comment-item ${hiddenClass} ${minimizedClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}" data-is-minimized="${comment.isMinimized}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
+                                ${minimizedIndicator}
                                 <span class="comment-date">${escapeHtml(date)}</span>
                                 <button class="comment-hide-btn" onclick="toggleCommentVisibility(${prIndex}, ${idx})">${hideButtonText}</button>
                             </div>
@@ -1776,6 +1801,18 @@
         function toggleHiddenComments(prIndex) {
             const checkbox = document.getElementById(`hide-auto-${prIndex}`);
             const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].auto-hidden`);
+            comments.forEach(comment => {
+                if (checkbox.checked) {
+                    comment.classList.add('hidden');
+                } else {
+                    comment.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function toggleMinimizedComments(prIndex) {
+            const checkbox = document.getElementById(`hide-minimized-${prIndex}`);
+            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].minimized-comment`);
             comments.forEach(comment => {
                 if (checkbox.checked) {
                     comment.classList.add('hidden');
