@@ -1183,7 +1183,6 @@
                                             line
                                             originalLine
                                             createdAt
-                                            isResolved
                                         }
                                     }
                                 }
@@ -1705,11 +1704,6 @@
                     // Add inline review comments
                     if (review.comments && review.comments.nodes) {
                         review.comments.nodes.forEach(comment => {
-                            // Skip resolved comments
-                            if (comment.isResolved) {
-                                return;
-                            }
-                            
                             const inlineComment = {
                                 type: 'inline',
                                 author: comment.author.login,
