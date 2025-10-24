@@ -450,6 +450,10 @@
             display: none;
         }
         
+        .comment-item.resolved-comment {
+            /* Will be hidden by default but can be shown via toggle */
+        }
+        
         .comment-item.manually-hidden .comment-body {
             display: none;
         }
@@ -569,7 +573,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: none; /* Hidden until PRs are loaded */
-            width: 560px;
+            width: 20%;
             flex-shrink: 0;
             position: sticky;
             top: 20px;
@@ -1171,6 +1175,11 @@
                                     body
                                     state
                                     createdAt
+                                }
+                            }
+                            reviewThreads(first: 100) {
+                                nodes {
+                                    isResolved
                                     comments(first: 100) {
                                         nodes {
                                             author {
@@ -1653,7 +1662,7 @@
         }
         
         function renderComments(prInfo, prIndex, viewerLogin) {
-            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
+            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7', 'copilot-pull-request-reviewer', 'jenkins-eks-aicoe'];
             const hiddenComments = getHiddenComments();
             let html = '<h3>Comments and Reviews</h3>';
             
@@ -1662,7 +1671,11 @@
                 <div class="comments-filter">
                     <label>
                         <input type="checkbox" id="hide-auto-${prIndex}" onchange="toggleHiddenComments(${prIndex})" checked>
-                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
+                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7, copilot-pull-request-reviewer, jenkins-eks-aicoe)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="hide-resolved-${prIndex}" onchange="toggleResolvedComments(${prIndex})" checked>
+                        Hide resolved threads
                     </label>
                     <label>
                         <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
@@ -1682,12 +1695,13 @@
                         author: comment.author.login,
                         body: comment.body,
                         createdAt: comment.createdAt,
-                        isHidden: hiddenUsers.includes(comment.author.login)
+                        isHidden: hiddenUsers.includes(comment.author.login),
+                        isResolved: false // Issue comments don't have resolved state
                     });
                 });
             }
             
-            // Add review comments
+            // Add review comments (the review summary, not thread comments)
             if (prInfo.reviews && prInfo.reviews.nodes) {
                 prInfo.reviews.nodes.forEach(review => {
                     if (review.body) {
@@ -1697,15 +1711,22 @@
                             body: review.body,
                             state: review.state,
                             createdAt: review.createdAt,
-                            isHidden: hiddenUsers.includes(review.author.login)
+                            isHidden: hiddenUsers.includes(review.author.login),
+                            isResolved: false // Review summaries don't have resolved state
                         });
                     }
+                });
+            }
+            
+            // Add review thread comments
+            if (prInfo.reviewThreads && prInfo.reviewThreads.nodes) {
+                prInfo.reviewThreads.nodes.forEach(thread => {
+                    const isResolved = thread.isResolved || false;
                     
-                    // Add inline review comments
-                    if (review.comments && review.comments.nodes) {
-                        review.comments.nodes.forEach(comment => {
-                            const inlineComment = {
-                                type: 'inline',
+                    if (thread.comments && thread.comments.nodes) {
+                        thread.comments.nodes.forEach(comment => {
+                            const threadComment = {
+                                type: 'thread',
                                 author: comment.author.login,
                                 body: comment.body,
                                 path: comment.path,
@@ -1714,10 +1735,11 @@
                                 line: comment.line,
                                 originalLine: comment.originalLine,
                                 createdAt: comment.createdAt,
-                                isHidden: hiddenUsers.includes(comment.author.login)
+                                isHidden: hiddenUsers.includes(comment.author.login),
+                                isResolved: isResolved
                             };
-                            allComments.push(inlineComment);
-                            inlineComments.push(inlineComment);
+                            allComments.push(threadComment);
+                            inlineComments.push(threadComment);
                         });
                     }
                 });
@@ -1736,24 +1758,32 @@
                     
                     if (comment.type === 'review') {
                         typeLabel = ` <span style="color: #0366d6; font-weight: 600;">[${comment.state}]</span>`;
-                    } else if (comment.type === 'inline') {
+                    } else if (comment.type === 'thread') {
                         const lineInfo = comment.line ? `:${comment.line}` : '';
                         typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)}${lineInfo})</span>`;
                     }
                     
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
-                    const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
+                    const resolvedClass = comment.isResolved ? 'hidden resolved-comment' : '';
+                    const threadClass = comment.type === 'thread' ? 'thread-comment' : '';
                     
                     const manuallyHiddenKey = `${prIndex}-${idx}`;
                     const isManuallyHidden = hiddenComments[manuallyHiddenKey];
                     const manuallyHiddenClass = isManuallyHidden ? 'manually-hidden' : '';
                     const hideButtonText = isManuallyHidden ? 'Show' : 'Hide';
                     
+                    // Add resolved indicator to type label if comment is resolved
+                    let resolvedIndicator = '';
+                    if (comment.isResolved) {
+                        resolvedIndicator = ` <span style="color: #22863a; font-size: 11px; font-weight: 600;">✓ [RESOLVED]</span>`;
+                    }
+                    
                     html += `
-                        <div class="comment-item ${hiddenClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}">
+                        <div class="comment-item ${hiddenClass} ${resolvedClass} ${threadClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}" data-is-resolved="${comment.isResolved}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
+                                ${resolvedIndicator}
                                 <span class="comment-date">${escapeHtml(date)}</span>
                                 <button class="comment-hide-btn" onclick="toggleCommentVisibility(${prIndex}, ${idx})">${hideButtonText}</button>
                             </div>
@@ -1785,6 +1815,27 @@
             });
         }
         
+        function toggleResolvedComments(prIndex) {
+            const checkbox = document.getElementById(`hide-resolved-${prIndex}`);
+            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].resolved-comment`);
+            comments.forEach(comment => {
+                if (checkbox.checked) {
+                    comment.classList.add('hidden');
+                } else {
+                    comment.classList.remove('hidden');
+                }
+            });
+            
+            // Also refresh inline comments in diffs to reflect the change
+            const showInlineCheckbox = document.getElementById(`show-inline-${prIndex}`);
+            if (showInlineCheckbox && showInlineCheckbox.checked) {
+                // Remove existing inline comments and re-add them with the new filter
+                removeInlineCommentsFromDiff(prIndex);
+                const inlineComments = window.inlineCommentsData[prIndex] || [];
+                insertInlineCommentsIntoDiff(prIndex, inlineComments);
+            }
+        }
+        
         function toggleInlineComments(prIndex) {
             const checkbox = document.getElementById(`show-inline-${prIndex}`);
             const inlineComments = window.inlineCommentsData[prIndex] || [];
@@ -1799,9 +1850,18 @@
         }
         
         function insertInlineCommentsIntoDiff(prIndex, inlineComments) {
+            // Check if we should hide resolved threads
+            const hideResolvedCheckbox = document.getElementById(`hide-resolved-${prIndex}`);
+            const shouldHideResolved = hideResolvedCheckbox ? hideResolvedCheckbox.checked : false;
+            
+            // Filter out resolved comments if the hide resolved checkbox is checked
+            const visibleComments = shouldHideResolved 
+                ? inlineComments.filter(comment => !comment.isResolved)
+                : inlineComments;
+            
             // Group comments by file path
             const commentsByFile = {};
-            inlineComments.forEach(comment => {
+            visibleComments.forEach(comment => {
                 if (!commentsByFile[comment.path]) {
                     commentsByFile[comment.path] = [];
                 }
@@ -1834,10 +1894,11 @@
                                 comments.forEach(comment => {
                                     const date = new Date(comment.createdAt).toLocaleString();
                                     const lineInfo = comment.line ? ` on line ${comment.line}` : '';
+                                    const resolvedBadge = comment.isResolved ? ` <span style="color: #22863a; font-size: 11px; font-weight: 600;">✓ [RESOLVED]</span>` : '';
                                     commentsHtml += `
                                         <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
                                             <div style="font-weight: 600; margin-bottom: 5px;">
-                                                ${escapeHtml(comment.author)}${lineInfo} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
+                                                ${escapeHtml(comment.author)}${lineInfo}${resolvedBadge} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
                                             </div>
                                             <div style="white-space: pre-wrap;">${escapeHtml(comment.body)}</div>
                                         </div>
