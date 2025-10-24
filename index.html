@@ -617,6 +617,9 @@
             font-weight: 600;
             color: #24292e;
             user-select: none;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            background: white;
         }
         
         .file-tree-folder-header:hover {
@@ -629,6 +632,14 @@
             margin-right: 5px;
             text-align: center;
             transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .file-tree-folder-name {
+            flex: 1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            min-width: 0;
         }
         
         .file-tree-folder.collapsed .file-tree-folder-toggle {
@@ -654,6 +665,9 @@
             border-radius: 4px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
             font-size: 13px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            background: white;
         }
         
         .file-tree-file:hover {
@@ -663,11 +677,15 @@
         .file-tree-file-icon {
             margin-right: 8px;
             color: #666;
+            flex-shrink: 0;
         }
         
         .file-tree-file-name {
             flex: 1;
             color: #0366d6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            min-width: 0;
         }
         
         .file-tree-file-badge {
@@ -727,6 +745,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .pr-section-header:first-child {
@@ -742,6 +762,7 @@
             width: 16px;
             text-align: center;
             transition: transform 0.2s;
+            flex-shrink: 0;
         }
         
         .pr-section.collapsed .pr-section-toggle {
@@ -1435,7 +1456,7 @@
                 const prHeader = document.createElement('div');
                 prHeader.className = 'pr-section-header';
                 prHeader.innerHTML = `
-                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span style="flex: 1; word-wrap: break-word; overflow-wrap: break-word; min-width: 0;">
                         PR #${prData.info.number}: ${escapeHtml(prData.info.title)}
                     </span>
                     <span class="pr-section-toggle">▼</span>
@@ -1587,7 +1608,7 @@
                 header.className = 'file-tree-folder-header';
                 header.innerHTML = `
                     <span class="file-tree-folder-toggle">▼</span>
-                    <span>📁 ${escapeHtml(displayName)}</span>
+                    <span class="file-tree-folder-name">📁 ${escapeHtml(displayName)}</span>
                 `;
                 
                 header.onclick = function() {

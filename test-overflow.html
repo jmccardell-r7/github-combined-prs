@@ -2,6 +2,11 @@
 <html>
 <head>
 <style>
+    body {
+        padding: 20px;
+        background: #f5f5f5;
+    }
+    
     .file-explorer-content {
         flex: 1;
         overflow-y: auto;
@@ -22,6 +27,24 @@
         color: #24292e;
         user-select: none;
         background: white;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        margin-bottom: 5px;
+    }
+    
+    .file-tree-folder-toggle {
+        display: inline-block;
+        width: 16px;
+        margin-right: 5px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .file-tree-folder-name {
+        flex: 1;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        min-width: 0;
     }
     
     .file-tree-file {
@@ -34,22 +57,75 @@
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
         font-size: 13px;
         background: white;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .file-tree-file-icon {
+        margin-right: 8px;
+        color: #666;
+        flex-shrink: 0;
     }
     
     .file-tree-file-name {
         flex: 1;
         color: #0366d6;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        min-width: 0;
+    }
+    
+    .pr-section-header {
+        margin: 20px 0 10px 0;
+        padding: 8px 10px;
+        background: #0366d6;
+        color: white;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        width: 300px;
+        margin-bottom: 10px;
+    }
+    
+    .pr-section-toggle {
+        display: inline-block;
+        width: 16px;
+        text-align: center;
+        flex-shrink: 0;
     }
 </style>
 </head>
 <body>
-    <h1>Test File Tree Overflow</h1>
+    <h1>Test File Tree Overflow - AFTER FIX</h1>
+    
+    <h2>PR Section Header (should wrap with blue background):</h2>
+    <div class="pr-section-header">
+        <span style="flex: 1; word-wrap: break-word; overflow-wrap: break-word; min-width: 0;">
+            PR #12345: This is a very long pull request title that should wrap and the blue background should extend to cover all the text
+        </span>
+        <span class="pr-section-toggle">▼</span>
+    </div>
+    
+    <h2>File Tree (should wrap with white background):</h2>
     <div class="file-explorer-content">
         <div class="file-tree-folder-header">
-            <span>📁 very-long-folder-name-that-might-overflow-the-container-width</span>
+            <span class="file-tree-folder-toggle">▼</span>
+            <span class="file-tree-folder-name">📁 very-long-folder-name-that-might-overflow-the-container-width</span>
         </div>
         <div class="file-tree-file">
+            <span class="file-tree-file-icon">📄</span>
             <span class="file-tree-file-name">very-long-file-name-that-definitely-should-overflow-the-white-background-container.js</span>
+        </div>
+        <div class="file-tree-file">
+            <span class="file-tree-file-icon">📄</span>
+            <span class="file-tree-file-name">another-extremely-long-filename-with-many-characters-to-test-wrapping-behavior.tsx</span>
         </div>
     </div>
 </body>
