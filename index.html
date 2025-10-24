@@ -1662,7 +1662,7 @@
         }
         
         function renderComments(prInfo, prIndex, viewerLogin) {
-            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7'];
+            const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7', 'copilot-pull-request-reviewer', 'jenkins-eks-aicoe'];
             const hiddenComments = getHiddenComments();
             let html = '<h3>Comments and Reviews</h3>';
             
@@ -1671,7 +1671,7 @@
                 <div class="comments-filter">
                     <label>
                         <input type="checkbox" id="hide-auto-${prIndex}" onchange="toggleHiddenComments(${prIndex})" checked>
-                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
+                        Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7, copilot-pull-request-reviewer, jenkins-eks-aicoe)
                     </label>
                     <label>
                         <input type="checkbox" id="hide-resolved-${prIndex}" onchange="toggleResolvedComments(${prIndex})" checked>
