@@ -2,6 +2,8 @@
 *.tmp
 *.log
 .DS_Store
+test-diff.html
+test-sticky-layout.html
 
 # Editor files
 .vscode/
