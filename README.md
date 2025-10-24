@@ -9,6 +9,7 @@ A static site to combine and review multiple GitHub Pull Requests at once.
 - 📝 **Easy PR Management**: Add PRs via URL or simple path format (owner/repo/pull/123)
 - ⚡ **Efficient Data Fetching**: Uses GitHub GraphQL API with aliases to fetch all PR data in a single request
 - 🎨 **Beautiful Diffs**: Renders all file changes using diff2html with side-by-side view
+- 📁 **File Explorer**: Aggregated tree view of all changed files across all PRs for quick navigation
 - 💬 **Comments & Reviews**: View all PR comments, reviews, and inline code comments in one place
 - 👁️ **Hide Individual Comments**: Hide/show individual comments with a single click, state persists in localStorage
 - 🔗 **Jump Links**: Quick navigation links in the PR list to jump to each PR section
@@ -54,6 +55,21 @@ http://your-site.com/?prs=owner/repo/pull/1,owner2/repo2/pull/2
 ```
 
 The `prs` query parameter contains a comma-separated list of PR paths.
+
+## File Explorer
+
+When you load PRs, a file explorer appears showing all changed files across all PRs:
+
+- **Tree Structure**: Files are organized by directory in a collapsible tree view
+- **Quick Navigation**: Click any file to jump directly to its diff in the corresponding PR
+- **Multi-PR Indicator**: Files changed in multiple PRs show a badge indicating how many PRs modify that file
+- **Statistics**: View total files, directories, and PRs at a glance
+- **Familiar UI**: Similar to code review tools like Crucible for easy adoption
+
+The file explorer makes it easy to:
+- Get an overview of all changes across multiple PRs
+- Navigate directly to specific files you want to review
+- Identify files that are being modified in multiple PRs simultaneously
 
 ## Comments and Approvals
 

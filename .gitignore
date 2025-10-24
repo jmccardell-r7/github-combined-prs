@@ -12,3 +12,6 @@
 
 # OS files
 Thumbs.db
+
+# Test files
+file-explorer-test.html
