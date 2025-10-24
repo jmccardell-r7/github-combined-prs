@@ -9,6 +9,7 @@ A static site to combine and review multiple GitHub Pull Requests at once.
 - 📝 **Easy PR Management**: Add PRs via URL or simple path format (owner/repo/pull/123)
 - ⚡ **Efficient Data Fetching**: Uses GitHub GraphQL API with aliases to fetch all PR data in a single request
 - 🎨 **Beautiful Diffs**: Renders all file changes using diff2html with side-by-side view
+- 📁 **Sticky File Explorer**: File list sticks to the left side while scrolling through diffs for easy navigation
 - 💬 **Comments & Reviews**: View all PR comments, reviews, and inline code comments in one place
 - 👁️ **Hide Individual Comments**: Hide/show individual comments with a single click, state persists in localStorage
 - 🔗 **Jump Links**: Quick navigation links in the PR list to jump to each PR section
@@ -37,7 +38,9 @@ A static site to combine and review multiple GitHub Pull Requests at once.
    - Click "Load PRs" to fetch all PR data from GitHub
    - View PR details, metadata, and full file diffs
    - The "Current PRs" list shows approval status and jump links for each PR
-   - Diffs are rendered in a side-by-side format
+   - Diffs are rendered in a side-by-side format with a sticky file explorer on the left
+   - The file explorer remains visible while scrolling, allowing quick navigation between files
+   - Click on any file name in the explorer to jump to that file's diff
    - Read comments and reviews from collaborators
    - Hide individual comments by clicking the "Hide" button (hidden state persists)
    - Add your own comments using the comment box
