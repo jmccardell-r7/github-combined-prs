@@ -25,6 +25,18 @@
             padding: 20px;
         }
         
+        /* Two-column layout when file explorer is visible */
+        .main-content-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .main-content {
+            flex: 1;
+            min-width: 0; /* Allows flex item to shrink below content size */
+        }
+        
         header {
             background: #24292e;
             color: white;
@@ -554,19 +566,27 @@
         .file-explorer {
             background: white;
             padding: 20px;
-            margin-bottom: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: none; /* Hidden until PRs are loaded */
+            width: 350px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
         .file-explorer h2 {
             margin-bottom: 15px;
             color: #24292e;
+            font-size: 18px;
         }
         
         .file-explorer-content {
-            max-height: 600px;
+            flex: 1;
             overflow-y: auto;
             border: 1px solid #e1e4e8;
             border-radius: 4px;
@@ -664,17 +684,19 @@
         
         .file-stats {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
             margin-bottom: 15px;
             padding: 10px;
             background: #f6f8fa;
             border-radius: 4px;
+            font-size: 12px;
         }
         
         .file-stat-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 5px;
         }
         
         .file-stat-label {
@@ -684,6 +706,7 @@
         
         .file-stat-value {
             color: #666;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -729,33 +752,37 @@
             </div>
         </div>
 
-        <div id="file-explorer" class="file-explorer">
-            <h2>📁 File Explorer - All Changed Files</h2>
-            <div class="file-stats">
-                <div class="file-stat-item">
-                    <span class="file-stat-label">Total Files:</span>
-                    <span class="file-stat-value" id="total-files-count">0</span>
+        <div class="main-content-wrapper">
+            <div id="file-explorer" class="file-explorer">
+                <h2>📁 Files</h2>
+                <div class="file-stats">
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">Files:</span>
+                        <span class="file-stat-value" id="total-files-count">0</span>
+                    </div>
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">Dirs:</span>
+                        <span class="file-stat-value" id="total-dirs-count">0</span>
+                    </div>
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">PRs:</span>
+                        <span class="file-stat-value" id="total-prs-count">0</span>
+                    </div>
                 </div>
-                <div class="file-stat-item">
-                    <span class="file-stat-label">Directories:</span>
-                    <span class="file-stat-value" id="total-dirs-count">0</span>
-                </div>
-                <div class="file-stat-item">
-                    <span class="file-stat-label">PRs:</span>
-                    <span class="file-stat-value" id="total-prs-count">0</span>
+                <div class="file-explorer-content">
+                    <ul id="file-tree" class="file-tree"></ul>
                 </div>
             </div>
-            <div class="file-explorer-content">
-                <ul id="file-tree" class="file-tree"></ul>
+
+            <div class="main-content">
+                <div id="loading-indicator" style="display: none;" class="loading">
+                    Loading PR data
+                </div>
+
+                <div id="error-container"></div>
+                <div id="pr-data-container"></div>
             </div>
         </div>
-
-        <div id="loading-indicator" style="display: none;" class="loading">
-            Loading PR data
-        </div>
-
-        <div id="error-container"></div>
-        <div id="pr-data-container"></div>
     </div>
     
     <!-- Jump to Top button -->
@@ -1346,7 +1373,7 @@
             renderFileTree(tree, fileMap, prDataArray.length);
             
             // Show the file explorer
-            document.getElementById('file-explorer').style.display = 'block';
+            document.getElementById('file-explorer').style.display = 'flex';
         }
         
         function extractFilesFromDiff(diffText) {
