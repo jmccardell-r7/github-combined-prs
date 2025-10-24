@@ -1825,6 +1825,15 @@
                     comment.classList.remove('hidden');
                 }
             });
+            
+            // Also refresh inline comments in diffs to reflect the change
+            const showInlineCheckbox = document.getElementById(`show-inline-${prIndex}`);
+            if (showInlineCheckbox && showInlineCheckbox.checked) {
+                // Remove existing inline comments and re-add them with the new filter
+                removeInlineCommentsFromDiff(prIndex);
+                const inlineComments = window.inlineCommentsData[prIndex] || [];
+                insertInlineCommentsIntoDiff(prIndex, inlineComments);
+            }
         }
         
         function toggleInlineComments(prIndex) {
@@ -1841,9 +1850,18 @@
         }
         
         function insertInlineCommentsIntoDiff(prIndex, inlineComments) {
+            // Check if we should hide resolved threads
+            const hideResolvedCheckbox = document.getElementById(`hide-resolved-${prIndex}`);
+            const shouldHideResolved = hideResolvedCheckbox ? hideResolvedCheckbox.checked : false;
+            
+            // Filter out resolved comments if the hide resolved checkbox is checked
+            const visibleComments = shouldHideResolved 
+                ? inlineComments.filter(comment => !comment.isResolved)
+                : inlineComments;
+            
             // Group comments by file path
             const commentsByFile = {};
-            inlineComments.forEach(comment => {
+            visibleComments.forEach(comment => {
                 if (!commentsByFile[comment.path]) {
                     commentsByFile[comment.path] = [];
                 }
@@ -1876,10 +1894,11 @@
                                 comments.forEach(comment => {
                                     const date = new Date(comment.createdAt).toLocaleString();
                                     const lineInfo = comment.line ? ` on line ${comment.line}` : '';
+                                    const resolvedBadge = comment.isResolved ? ` <span style="color: #22863a; font-size: 11px; font-weight: 600;">✓ [RESOLVED]</span>` : '';
                                     commentsHtml += `
                                         <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
                                             <div style="font-weight: 600; margin-bottom: 5px;">
-                                                ${escapeHtml(comment.author)}${lineInfo} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
+                                                ${escapeHtml(comment.author)}${lineInfo}${resolvedBadge} <span style="color: #666; font-weight: normal; font-size: 12px;">${escapeHtml(date)}</span>
                                             </div>
                                             <div style="white-space: pre-wrap;">${escapeHtml(comment.body)}</div>
                                         </div>
