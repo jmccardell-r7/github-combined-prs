@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    .file-explorer-content {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #e1e4e8;
+        border-radius: 4px;
+        padding: 10px;
+        background: #f6f8fa;
+        width: 300px;
+    }
+    
+    .file-tree-folder-header {
+        display: flex;
+        align-items: center;
+        padding: 5px 8px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: 600;
+        color: #24292e;
+        user-select: none;
+        background: white;
+    }
+    
+    .file-tree-file {
+        display: flex;
+        align-items: center;
+        padding: 5px 8px;
+        margin: 2px 0;
+        cursor: pointer;
+        border-radius: 4px;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        font-size: 13px;
+        background: white;
+    }
+    
+    .file-tree-file-name {
+        flex: 1;
+        color: #0366d6;
+    }
+</style>
+</head>
+<body>
+    <h1>Test File Tree Overflow</h1>
+    <div class="file-explorer-content">
+        <div class="file-tree-folder-header">
+            <span>📁 very-long-folder-name-that-might-overflow-the-container-width</span>
+        </div>
+        <div class="file-tree-file">
+            <span class="file-tree-file-name">very-long-file-name-that-definitely-should-overflow-the-white-background-container.js</span>
+        </div>
+    </div>
+</body>
+</html>
