@@ -710,48 +710,47 @@
         }
         
         /* PR selector for file explorer */
-        .pr-selector {
-            margin-bottom: 15px;
-        }
-        
-        .pr-selector-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 10px;
-        }
-        
-        .pr-tab {
-            padding: 5px 10px;
-            background: #f6f8fa;
-            border: 1px solid #e1e4e8;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            color: #666;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
-        }
-        
-        .pr-tab:hover {
-            background: #e1e4e8;
-        }
-        
-        .pr-tab.active {
+        .pr-section-header {
+            margin: 20px 0 10px 0;
+            padding: 8px 10px;
             background: #0366d6;
             color: white;
-            border-color: #0366d6;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         
-        .pr-file-tree {
+        .pr-section-header:first-child {
+            margin-top: 0;
+        }
+        
+        .pr-section-header:hover {
+            background: #0256c7;
+        }
+        
+        .pr-section-toggle {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .pr-section.collapsed .pr-section-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .pr-section.collapsed .pr-file-tree {
             display: none;
         }
         
-        .pr-file-tree.active {
+        .pr-file-tree {
             display: block;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -800,9 +799,6 @@
         <div class="main-content-wrapper">
             <div id="file-explorer" class="file-explorer">
                 <h2>📁 Files</h2>
-                <div class="pr-selector">
-                    <div id="pr-selector-tabs" class="pr-selector-tabs"></div>
-                </div>
                 <div class="file-stats">
                     <div class="file-stat-item">
                         <span class="file-stat-label">Files:</span>
@@ -811,6 +807,10 @@
                     <div class="file-stat-item">
                         <span class="file-stat-label">Dirs:</span>
                         <span class="file-stat-value" id="total-dirs-count">0</span>
+                    </div>
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">PRs:</span>
+                        <span class="file-stat-value" id="total-prs-count">0</span>
                     </div>
                 </div>
                 <div class="file-explorer-content" id="file-explorer-content">
@@ -1396,21 +1396,13 @@
         
         function buildFileExplorer(prDataArray) {
             const explorerContent = document.getElementById('file-explorer-content');
-            const tabsContainer = document.getElementById('pr-selector-tabs');
-            
             explorerContent.innerHTML = '';
-            tabsContainer.innerHTML = '';
             
-            // Build separate file tree for each PR
+            let totalFiles = 0;
+            let totalDirs = 0;
+            
+            // Build and display file tree for each PR
             prDataArray.forEach((prData, prIndex) => {
-                // Create tab for this PR
-                const tab = document.createElement('div');
-                tab.className = 'pr-tab' + (prIndex === 0 ? ' active' : '');
-                tab.textContent = `PR #${prData.info.number}`;
-                tab.title = prData.info.title;
-                tab.onclick = () => switchPRTab(prIndex);
-                tabsContainer.appendChild(tab);
-                
                 // Extract files from this PR's diff
                 const files = extractFilesFromDiff(prData.diff);
                 const fileMap = new Map();
@@ -1421,9 +1413,30 @@
                 // Build directory tree for this PR
                 const tree = buildDirectoryTree(fileMap);
                 
-                // Create container for this PR's file tree
+                // Count for overall stats
+                totalFiles += fileMap.size;
+                totalDirs += countDirectories(tree);
+                
+                // Create PR section container
+                const prSection = document.createElement('div');
+                prSection.className = 'pr-section';
+                prSection.id = `pr-section-${prIndex}`;
+                
+                // Create PR header
+                const prHeader = document.createElement('div');
+                prHeader.className = 'pr-section-header';
+                prHeader.innerHTML = `
+                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        PR #${prData.info.number}: ${escapeHtml(prData.info.title)}
+                    </span>
+                    <span class="pr-section-toggle">▼</span>
+                `;
+                prHeader.title = `PR #${prData.info.number}: ${prData.info.title}`;
+                prHeader.onclick = () => togglePRSection(prIndex);
+                
+                // Create file tree container
                 const treeContainer = document.createElement('div');
-                treeContainer.className = 'pr-file-tree' + (prIndex === 0 ? ' active' : '');
+                treeContainer.className = 'pr-file-tree';
                 treeContainer.id = `pr-tree-${prIndex}`;
                 
                 const treeList = document.createElement('ul');
@@ -1433,45 +1446,24 @@
                 renderTreeNode(tree, treeList, fileMap, '', prIndex);
                 
                 treeContainer.appendChild(treeList);
-                explorerContent.appendChild(treeContainer);
+                
+                prSection.appendChild(prHeader);
+                prSection.appendChild(treeContainer);
+                explorerContent.appendChild(prSection);
             });
             
-            // Update stats for the first PR (active by default)
-            updateFileStats(0, prDataArray);
+            // Update overall stats
+            document.getElementById('total-files-count').textContent = totalFiles;
+            document.getElementById('total-dirs-count').textContent = totalDirs;
+            document.getElementById('total-prs-count').textContent = prDataArray.length;
             
             // Show the file explorer
             document.getElementById('file-explorer').style.display = 'flex';
         }
         
-        function switchPRTab(prIndex) {
-            // Update tabs
-            const tabs = document.querySelectorAll('.pr-tab');
-            tabs.forEach((tab, index) => {
-                tab.classList.toggle('active', index === prIndex);
-            });
-            
-            // Update trees
-            const trees = document.querySelectorAll('.pr-file-tree');
-            trees.forEach((tree, index) => {
-                tree.classList.toggle('active', index === prIndex);
-            });
-            
-            // Update stats
-            updateFileStats(prIndex, prDataCache);
-        }
-        
-        function updateFileStats(prIndex, prDataArray) {
-            if (!prDataArray || !prDataArray[prIndex]) return;
-            
-            const files = extractFilesFromDiff(prDataArray[prIndex].diff);
-            const fileMap = new Map();
-            files.forEach(filePath => {
-                fileMap.set(filePath, [prIndex]);
-            });
-            const tree = buildDirectoryTree(fileMap);
-            
-            document.getElementById('total-files-count').textContent = fileMap.size;
-            document.getElementById('total-dirs-count').textContent = countDirectories(tree);
+        function togglePRSection(prIndex) {
+            const section = document.getElementById(`pr-section-${prIndex}`);
+            section.classList.toggle('collapsed');
         }
         
         function extractFilesFromDiff(diffText) {
