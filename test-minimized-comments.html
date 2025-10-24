@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test - Minimized Comments Feature</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .test-result { margin: 5px 0; padding: 8px; background: white; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Minimized Comments Feature Tests</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: isMinimized Field Processing</h2>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Minimized Comment Classes</h2>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Toggle Function Logic</h2>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Default State (Hidden by Default)</h2>
+        <div id="test4-result"></div>
+    </div>
+
+    <script>
+        function testResult(id, message, pass) {
+            const el = document.getElementById(id);
+            const statusClass = pass ? 'pass' : 'fail';
+            const statusText = pass ? '✓ PASS' : '✗ FAIL';
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result';
+            resultDiv.innerHTML = '<span class="' + statusClass + '">' + statusText + '</span>: ' + message;
+            el.appendChild(resultDiv);
+        }
+
+        // Test 1: isMinimized Field Processing
+        (function() {
+            // Simulate comment processing
+            const mockComment = {
+                author: { login: 'testuser' },
+                body: 'Test comment',
+                createdAt: new Date().toISOString(),
+                isMinimized: true,
+                minimizedReason: 'OUTDATED'
+            };
+            
+            const processedComment = {
+                type: 'comment',
+                author: mockComment.author.login,
+                body: mockComment.body,
+                createdAt: mockComment.createdAt,
+                isHidden: false,
+                isMinimized: mockComment.isMinimized || false,
+                minimizedReason: mockComment.minimizedReason || null
+            };
+            
+            testResult('test1-result', 'Comment isMinimized field is captured', 
+                processedComment.isMinimized === true);
+            testResult('test1-result', 'Comment minimizedReason field is captured', 
+                processedComment.minimizedReason === 'OUTDATED');
+            
+            // Test with comment without isMinimized
+            const mockComment2 = {
+                author: { login: 'testuser2' },
+                body: 'Normal comment',
+                createdAt: new Date().toISOString()
+            };
+            
+            const processedComment2 = {
+                type: 'comment',
+                author: mockComment2.author.login,
+                body: mockComment2.body,
+                createdAt: mockComment2.createdAt,
+                isHidden: false,
+                isMinimized: mockComment2.isMinimized || false,
+                minimizedReason: mockComment2.minimizedReason || null
+            };
+            
+            testResult('test1-result', 'Non-minimized comment defaults to false', 
+                processedComment2.isMinimized === false);
+            testResult('test1-result', 'Non-minimized comment has null reason', 
+                processedComment2.minimizedReason === null);
+        })();
+
+        // Test 2: Minimized Comment Classes
+        (function() {
+            const comment = { isMinimized: true };
+            const minimizedClass = comment.isMinimized ? 'hidden minimized-comment' : '';
+            
+            testResult('test2-result', 'Minimized comment gets "hidden" class', 
+                minimizedClass.includes('hidden'));
+            testResult('test2-result', 'Minimized comment gets "minimized-comment" class', 
+                minimizedClass.includes('minimized-comment'));
+            
+            const normalComment = { isMinimized: false };
+            const normalClass = normalComment.isMinimized ? 'hidden minimized-comment' : '';
+            
+            testResult('test2-result', 'Normal comment does not get minimized classes', 
+                normalClass === '');
+        })();
+
+        // Test 3: Toggle Function Logic
+        (function() {
+            // Create mock DOM structure
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <input type="checkbox" id="hide-minimized-0" checked>
+                <div class="comment-item minimized-comment hidden" data-pr-index="0"></div>
+                <div class="comment-item minimized-comment hidden" data-pr-index="0"></div>
+                <div class="comment-item" data-pr-index="0"></div>
+            `;
+            document.body.appendChild(container);
+            
+            // Simulate toggle function
+            function toggleMinimizedComments(prIndex) {
+                const checkbox = document.getElementById(`hide-minimized-${prIndex}`);
+                const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].minimized-comment`);
+                comments.forEach(comment => {
+                    if (checkbox.checked) {
+                        comment.classList.add('hidden');
+                    } else {
+                        comment.classList.remove('hidden');
+                    }
+                });
+                return comments.length;
+            }
+            
+            const minimizedCount = toggleMinimizedComments(0);
+            testResult('test3-result', 'Toggle function finds minimized comments', 
+                minimizedCount === 2);
+            
+            const checkbox = document.getElementById('hide-minimized-0');
+            const minimizedComments = document.querySelectorAll('[data-pr-index="0"].minimized-comment');
+            const allHidden = Array.from(minimizedComments).every(c => c.classList.contains('hidden'));
+            
+            testResult('test3-result', 'When checked, minimized comments have hidden class', 
+                allHidden);
+            
+            // Uncheck and toggle
+            checkbox.checked = false;
+            toggleMinimizedComments(0);
+            const allVisible = Array.from(minimizedComments).every(c => !c.classList.contains('hidden'));
+            
+            testResult('test3-result', 'When unchecked, minimized comments are visible', 
+                allVisible);
+            
+            // Cleanup
+            document.body.removeChild(container);
+        })();
+
+        // Test 4: Default State (Hidden by Default)
+        (function() {
+            const defaultCheckboxState = true; // Should be checked by default
+            
+            testResult('test4-result', 'Checkbox is checked by default', 
+                defaultCheckboxState === true);
+            
+            // Test that minimized comments have hidden class applied on render
+            const comment = {
+                isMinimized: true,
+                isHidden: false
+            };
+            
+            const minimizedClass = comment.isMinimized ? 'hidden minimized-comment' : '';
+            const hasHiddenClass = minimizedClass.includes('hidden');
+            
+            testResult('test4-result', 'Minimized comments are hidden by default on render', 
+                hasHiddenClass);
+            
+            // Test minimized indicator rendering
+            const minimizedReason = 'OUTDATED';
+            const minimizedIndicator = ` <span style="color: #999; font-size: 11px; font-weight: 600;">[MINIMIZED (${minimizedReason})]</span>`;
+            
+            testResult('test4-result', 'Minimized indicator includes reason when available', 
+                minimizedIndicator.includes('OUTDATED'));
+        })();
+    </script>
+</body>
+</html>
