@@ -20,9 +20,21 @@
         }
         
         .container {
-            max-width: 1800px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 20px;
+        }
+        
+        /* Two-column layout when file explorer is visible */
+        .main-content-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .main-content {
+            flex: 1;
+            min-width: 0; /* Allows flex item to shrink below content size */
         }
         
         header {
@@ -549,6 +561,197 @@
             background: #ffeef0;
             color: #d73a49;
         }
+        
+        /* File Explorer Styles */
+        .file-explorer {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none; /* Hidden until PRs are loaded */
+            width: 280px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-explorer h2 {
+            margin-bottom: 15px;
+            color: #24292e;
+            font-size: 16px;
+        }
+        
+        .file-explorer-content {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 10px;
+            background: #f6f8fa;
+        }
+        
+        .file-tree {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .file-tree-folder {
+            margin: 5px 0;
+        }
+        
+        .file-tree-folder-header {
+            display: flex;
+            align-items: center;
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #24292e;
+            user-select: none;
+        }
+        
+        .file-tree-folder-header:hover {
+            background: #e1e4e8;
+        }
+        
+        .file-tree-folder-toggle {
+            display: inline-block;
+            width: 16px;
+            margin-right: 5px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .file-tree-folder.collapsed .file-tree-folder-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .file-tree-folder-children {
+            margin-left: 20px;
+            list-style: none;
+            padding: 0;
+        }
+        
+        .file-tree-folder.collapsed .file-tree-folder-children {
+            display: none;
+        }
+        
+        .file-tree-file {
+            display: flex;
+            align-items: center;
+            padding: 5px 8px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+            font-size: 13px;
+        }
+        
+        .file-tree-file:hover {
+            background: #e1e4e8;
+        }
+        
+        .file-tree-file-icon {
+            margin-right: 8px;
+            color: #666;
+        }
+        
+        .file-tree-file-name {
+            flex: 1;
+            color: #0366d6;
+        }
+        
+        .file-tree-file-badge {
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: #0366d6;
+            color: white;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .file-tree-file-prs {
+            margin-left: 8px;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .file-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f6f8fa;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .file-stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-stat-label {
+            font-weight: 600;
+            color: #24292e;
+        }
+        
+        .file-stat-value {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        /* PR selector for file explorer */
+        .pr-section-header {
+            margin: 20px 0 10px 0;
+            padding: 8px 10px;
+            background: #0366d6;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .pr-section-header:first-child {
+            margin-top: 0;
+        }
+        
+        .pr-section-header:hover {
+            background: #0256c7;
+        }
+        
+        .pr-section-toggle {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .pr-section.collapsed .pr-section-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .pr-section.collapsed .pr-file-tree {
+            display: none;
+        }
+        
+        .pr-file-tree {
+            display: block;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -593,12 +796,36 @@
             </div>
         </div>
 
-        <div id="loading-indicator" style="display: none;" class="loading">
-            Loading PR data
-        </div>
+        <div class="main-content-wrapper">
+            <div id="file-explorer" class="file-explorer">
+                <h2>📁 Files</h2>
+                <div class="file-stats">
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">Files:</span>
+                        <span class="file-stat-value" id="total-files-count">0</span>
+                    </div>
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">Dirs:</span>
+                        <span class="file-stat-value" id="total-dirs-count">0</span>
+                    </div>
+                    <div class="file-stat-item">
+                        <span class="file-stat-label">PRs:</span>
+                        <span class="file-stat-value" id="total-prs-count">0</span>
+                    </div>
+                </div>
+                <div class="file-explorer-content" id="file-explorer-content">
+                </div>
+            </div>
 
-        <div id="error-container"></div>
-        <div id="pr-data-container"></div>
+            <div class="main-content">
+                <div id="loading-indicator" style="display: none;" class="loading">
+                    Loading PR data
+                </div>
+
+                <div id="error-container"></div>
+                <div id="pr-data-container"></div>
+            </div>
+        </div>
     </div>
     
     <!-- Jump to Top button -->
@@ -1162,6 +1389,237 @@
                 // Show inline comments by default since checkbox is checked by default
                 setTimeout(() => toggleInlineComments(index), 100);
             });
+            
+            // Build and render file explorer
+            buildFileExplorer(prDataArray);
+        }
+        
+        function buildFileExplorer(prDataArray) {
+            const explorerContent = document.getElementById('file-explorer-content');
+            explorerContent.innerHTML = '';
+            
+            let totalFiles = 0;
+            let totalDirs = 0;
+            
+            // Build and display file tree for each PR
+            prDataArray.forEach((prData, prIndex) => {
+                // Extract files from this PR's diff
+                const files = extractFilesFromDiff(prData.diff);
+                const fileMap = new Map();
+                files.forEach(filePath => {
+                    fileMap.set(filePath, [prIndex]);
+                });
+                
+                // Build directory tree for this PR
+                const tree = buildDirectoryTree(fileMap);
+                
+                // Count for overall stats
+                totalFiles += fileMap.size;
+                totalDirs += countDirectories(tree);
+                
+                // Create PR section container
+                const prSection = document.createElement('div');
+                prSection.className = 'pr-section';
+                prSection.id = `pr-section-${prIndex}`;
+                
+                // Create PR header
+                const prHeader = document.createElement('div');
+                prHeader.className = 'pr-section-header';
+                prHeader.innerHTML = `
+                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        PR #${prData.info.number}: ${escapeHtml(prData.info.title)}
+                    </span>
+                    <span class="pr-section-toggle">▼</span>
+                `;
+                prHeader.title = `PR #${prData.info.number}: ${prData.info.title}`;
+                prHeader.onclick = () => togglePRSection(prIndex);
+                
+                // Create file tree container
+                const treeContainer = document.createElement('div');
+                treeContainer.className = 'pr-file-tree';
+                treeContainer.id = `pr-tree-${prIndex}`;
+                
+                const treeList = document.createElement('ul');
+                treeList.className = 'file-tree';
+                
+                // Render tree
+                renderTreeNode(tree, treeList, fileMap, '', prIndex);
+                
+                treeContainer.appendChild(treeList);
+                
+                prSection.appendChild(prHeader);
+                prSection.appendChild(treeContainer);
+                explorerContent.appendChild(prSection);
+            });
+            
+            // Update overall stats
+            document.getElementById('total-files-count').textContent = totalFiles;
+            document.getElementById('total-dirs-count').textContent = totalDirs;
+            document.getElementById('total-prs-count').textContent = prDataArray.length;
+            
+            // Show the file explorer
+            document.getElementById('file-explorer').style.display = 'flex';
+        }
+        
+        function togglePRSection(prIndex) {
+            const section = document.getElementById(`pr-section-${prIndex}`);
+            section.classList.toggle('collapsed');
+        }
+        
+        function extractFilesFromDiff(diffText) {
+            const files = [];
+            const lines = diffText.split('\n');
+            
+            for (let line of lines) {
+                // Match diff file headers: diff --git a/path b/path
+                if (line.startsWith('diff --git')) {
+                    const match = line.match(/diff --git a\/(.*?) b\//);
+                    if (match && match[1]) {
+                        files.push(match[1]);
+                    }
+                }
+            }
+            
+            return files;
+        }
+        
+        function buildDirectoryTree(fileMap) {
+            const tree = {};
+            
+            for (let filePath of fileMap.keys()) {
+                const parts = filePath.split('/');
+                let current = tree;
+                
+                // Build nested structure
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    const isFile = i === parts.length - 1;
+                    
+                    if (isFile) {
+                        // It's a file
+                        if (!current._files) {
+                            current._files = [];
+                        }
+                        current._files.push(filePath);
+                    } else {
+                        // It's a directory
+                        if (!current[part]) {
+                            current[part] = {};
+                        }
+                        current = current[part];
+                    }
+                }
+            }
+            
+            return tree;
+        }
+        
+        function countDirectories(tree, count = 0) {
+            for (let key in tree) {
+                if (key !== '_files') {
+                    count++;
+                    count = countDirectories(tree[key], count);
+                }
+            }
+            return count;
+        }
+        
+        function renderTreeNode(node, parentElement, fileMap, currentPath, prIndex) {
+            // Get directories and files
+            const directories = [];
+            const files = node._files || [];
+            
+            for (let key in node) {
+                if (key !== '_files') {
+                    directories.push(key);
+                }
+            }
+            
+            // Sort directories and files
+            directories.sort();
+            
+            // Render directories first
+            directories.forEach(dir => {
+                const dirPath = currentPath ? `${currentPath}/${dir}` : dir;
+                const li = document.createElement('li');
+                li.className = 'file-tree-folder';
+                
+                const header = document.createElement('div');
+                header.className = 'file-tree-folder-header';
+                header.innerHTML = `
+                    <span class="file-tree-folder-toggle">▼</span>
+                    <span>📁 ${escapeHtml(dir)}</span>
+                `;
+                
+                header.onclick = function() {
+                    li.classList.toggle('collapsed');
+                };
+                
+                li.appendChild(header);
+                
+                const childrenUl = document.createElement('ul');
+                childrenUl.className = 'file-tree-folder-children';
+                renderTreeNode(node[dir], childrenUl, fileMap, dirPath, prIndex);
+                li.appendChild(childrenUl);
+                
+                parentElement.appendChild(li);
+            });
+            
+            // Render files
+            files.sort().forEach(filePath => {
+                const fileName = filePath.split('/').pop();
+                
+                const li = document.createElement('li');
+                li.className = 'file-tree-file';
+                
+                li.innerHTML = `
+                    <span class="file-tree-file-icon">📄</span>
+                    <span class="file-tree-file-name">${escapeHtml(fileName)}</span>
+                `;
+                
+                li.onclick = function() {
+                    navigateToFile(filePath, prIndex);
+                };
+                
+                li.title = `${filePath} - Click to view in PR`;
+                
+                parentElement.appendChild(li);
+            });
+        }
+        
+        function navigateToFile(filePath, prIndex) {
+            // First scroll to the PR section
+            const prSection = document.getElementById(`pr-${prIndex}`);
+            if (!prSection) return;
+            
+            // Scroll to PR
+            prSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Try to find the specific file in the diff view
+            setTimeout(() => {
+                const diffContainer = document.getElementById(`diff-${prIndex}`);
+                if (!diffContainer) return;
+                
+                // Look for the file in diff2html's rendered output
+                const fileHeaders = diffContainer.querySelectorAll('.d2h-file-header');
+                for (let header of fileHeaders) {
+                    const fileNameSpan = header.querySelector('.d2h-file-name');
+                    if (fileNameSpan && fileNameSpan.textContent.includes(filePath)) {
+                        // Found it! Scroll to this file
+                        header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        
+                        // Highlight the file briefly
+                        const fileWrapper = header.closest('.d2h-file-wrapper');
+                        if (fileWrapper) {
+                            fileWrapper.style.outline = '3px solid #0366d6';
+                            setTimeout(() => {
+                                fileWrapper.style.outline = '';
+                            }, 2000);
+                        }
+                        break;
+                    }
+                }
+            }, 500);
         }
         
         function renderComments(prInfo, prIndex, viewerLogin) {
