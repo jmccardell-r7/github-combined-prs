@@ -569,7 +569,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: none; /* Hidden until PRs are loaded */
-            width: 280px;
+            width: 560px;
             flex-shrink: 0;
             position: sticky;
             top: 20px;
@@ -1524,6 +1524,30 @@
             return count;
         }
         
+        // Helper function to check if a directory node has only one subdirectory and no files
+        function shouldCondensePath(node) {
+            const keys = Object.keys(node).filter(k => k !== '_files');
+            const files = node._files || [];
+            return keys.length === 1 && files.length === 0;
+        }
+        
+        // Helper function to get condensed path for a directory
+        function getCondensedPath(node, baseName) {
+            let path = [baseName];
+            let current = node;
+            
+            while (shouldCondensePath(current)) {
+                const nextKey = Object.keys(current).find(k => k !== '_files');
+                path.push(nextKey);
+                current = current[nextKey];
+            }
+            
+            return {
+                condensedPath: path.join('/'),
+                finalNode: current
+            };
+        }
+        
         function renderTreeNode(node, parentElement, fileMap, currentPath, prIndex) {
             // Get directories and files
             const directories = [];
@@ -1541,6 +1565,12 @@
             // Render directories first
             directories.forEach(dir => {
                 const dirPath = currentPath ? `${currentPath}/${dir}` : dir;
+                
+                // Check if this directory should be condensed
+                const condensed = getCondensedPath(node[dir], dir);
+                const displayName = condensed.condensedPath;
+                const actualDirPath = currentPath ? `${currentPath}/${condensed.condensedPath}` : condensed.condensedPath;
+                
                 const li = document.createElement('li');
                 li.className = 'file-tree-folder';
                 
@@ -1548,7 +1578,7 @@
                 header.className = 'file-tree-folder-header';
                 header.innerHTML = `
                     <span class="file-tree-folder-toggle">▼</span>
-                    <span>📁 ${escapeHtml(dir)}</span>
+                    <span>📁 ${escapeHtml(displayName)}</span>
                 `;
                 
                 header.onclick = function() {
@@ -1559,7 +1589,7 @@
                 
                 const childrenUl = document.createElement('ul');
                 childrenUl.className = 'file-tree-folder-children';
-                renderTreeNode(node[dir], childrenUl, fileMap, dirPath, prIndex);
+                renderTreeNode(condensed.finalNode, childrenUl, fileMap, actualDirPath, prIndex);
                 li.appendChild(childrenUl);
                 
                 parentElement.appendChild(li);
