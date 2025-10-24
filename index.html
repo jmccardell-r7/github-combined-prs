@@ -269,9 +269,6 @@
         
         .diff-container {
             margin-top: 20px;
-            display: flex;
-            gap: 20px;
-            position: relative;
         }
         
         .no-prs {
@@ -553,73 +550,102 @@
             color: #d73a49;
         }
         
-        /* Sticky File Explorer Styles */
-        /* Make the file list sticky on the left side */
-        .diff-container .d2h-file-list-wrapper {
+        /* Global Sticky File Explorer Styles */
+        /* Main layout with sticky sidebar */
+        #pr-data-container {
+            display: flex;
+            gap: 20px;
+            position: relative;
+        }
+        
+        /* Global file explorer sidebar */
+        #global-file-explorer {
             position: sticky;
             top: 20px;
             align-self: flex-start;
             max-height: calc(100vh - 40px);
             overflow-y: auto;
             flex-shrink: 0;
-            width: 280px;
+            width: 300px;
             background: white;
             border: 1px solid #e1e4e8;
             border-radius: 6px;
-            padding: 10px;
+            padding: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        /* Style the file list */
-        .diff-container .d2h-file-list {
-            margin: 0;
-            padding: 0;
+        #global-file-explorer h3 {
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e1e4e8;
+            font-size: 16px;
+            color: #24292e;
         }
         
-        /* File list items */
-        .diff-container .d2h-file-list-line {
+        /* PR groups in file explorer */
+        .file-explorer-pr-group {
+            margin-bottom: 20px;
+        }
+        
+        .file-explorer-pr-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #0366d6;
+            margin-bottom: 8px;
             padding: 6px 8px;
+            background: #f6f8fa;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .file-explorer-pr-title:hover {
+            background: #e1e4e8;
+        }
+        
+        .file-explorer-file-list {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 0 12px;
+        }
+        
+        .file-explorer-file-item {
+            padding: 4px 8px;
             margin-bottom: 2px;
             border-radius: 4px;
+            font-size: 12px;
             transition: background-color 0.2s;
         }
         
-        .diff-container .d2h-file-list-line:hover {
+        .file-explorer-file-item:hover {
             background-color: #f6f8fa;
         }
         
-        .diff-container .d2h-file-list-line a {
+        .file-explorer-file-item a {
             text-decoration: none;
-            color: #0366d6;
-            font-size: 13px;
+            color: #586069;
+            display: block;
             word-break: break-all;
         }
         
-        .diff-container .d2h-file-list-line a:hover {
-            text-decoration: underline;
+        .file-explorer-file-item a:hover {
+            color: #0366d6;
         }
         
-        /* Ensure the diff content takes remaining space */
-        .diff-container .d2h-files-diff {
+        /* Main content area */
+        #pr-content-wrapper {
             flex: 1;
             min-width: 0;
+        }
+        
+        /* Hide diff2html's built-in file list since we have our own */
+        .diff-container .d2h-file-list-wrapper {
+            display: none;
         }
         
         /* Smooth scroll behavior for anchor links */
         html {
             scroll-behavior: smooth;
-        }
-        
-        /* Add a header to the file list */
-        .diff-container .d2h-file-list-wrapper::before {
-            content: "📁 Files Changed";
-            display: block;
-            font-weight: 600;
-            font-size: 14px;
-            color: #24292e;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e1e4e8;
         }
     </style>
 </head>
@@ -1119,8 +1145,49 @@
             
             // Re-render the PR list to show approval status
             renderPRList();
+            
+            // Create global file explorer
+            const fileExplorer = document.createElement('div');
+            fileExplorer.id = 'global-file-explorer';
+            fileExplorer.innerHTML = '<h3>📁 Files Changed</h3>';
+            
+            // Create content wrapper for PR sections
+            const contentWrapper = document.createElement('div');
+            contentWrapper.id = 'pr-content-wrapper';
 
             prDataArray.forEach((prData, index) => {
+                // Add PR files to global file explorer
+                const prGroup = document.createElement('div');
+                prGroup.className = 'file-explorer-pr-group';
+                
+                const prTitle = document.createElement('div');
+                prTitle.className = 'file-explorer-pr-title';
+                prTitle.textContent = `PR #${prData.info.number}: ${prData.info.title.substring(0, 40)}${prData.info.title.length > 40 ? '...' : ''}`;
+                prTitle.onclick = () => {
+                    document.getElementById(`pr-${index}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                
+                const fileList = document.createElement('ul');
+                fileList.className = 'file-explorer-file-list';
+                
+                // Extract file names from diff
+                const files = extractFilesFromDiff(prData.diff);
+                files.forEach((file, fileIndex) => {
+                    const fileItem = document.createElement('li');
+                    fileItem.className = 'file-explorer-file-item';
+                    const fileLink = document.createElement('a');
+                    fileLink.href = `#pr-${index}-file-${fileIndex}`;
+                    fileLink.textContent = file.name;
+                    fileLink.title = file.name;
+                    fileItem.appendChild(fileLink);
+                    fileList.appendChild(fileItem);
+                });
+                
+                prGroup.appendChild(prTitle);
+                prGroup.appendChild(fileList);
+                fileExplorer.appendChild(prGroup);
+                
+                // Create PR section
                 const section = document.createElement('div');
                 section.className = 'pr-section';
                 section.id = `pr-${index}`;
@@ -1214,12 +1281,12 @@
                 section.appendChild(diffContainer);
                 section.appendChild(commentsSection);
                 section.appendChild(commentForm);
-                container.appendChild(section);
+                contentWrapper.appendChild(section);
 
                 // Render diff using diff2html
                 try {
                     const diff2htmlUi = new Diff2HtmlUI(diffContainer, prData.diff, {
-                        drawFileList: true,
+                        drawFileList: false,  // Disable built-in file list since we have our own global one
                         matching: 'lines',
                         outputFormat: 'side-by-side',
                         synchronisedScroll: true,
@@ -1227,6 +1294,12 @@
                         renderNothingWhenEmpty: false,
                     });
                     diff2htmlUi.draw();
+                    
+                    // Add IDs to file wrappers for navigation
+                    const fileWrappers = diffContainer.querySelectorAll('.d2h-file-wrapper');
+                    fileWrappers.forEach((wrapper, fileIdx) => {
+                        wrapper.id = `pr-${index}-file-${fileIdx}`;
+                    });
                 } catch (error) {
                     diffContainer.innerHTML = `<div class="error">Error rendering diff: ${error.message}</div>`;
                 }
@@ -1234,6 +1307,29 @@
                 // Show inline comments by default since checkbox is checked by default
                 setTimeout(() => toggleInlineComments(index), 100);
             });
+            
+            // Add file explorer and content to container
+            container.appendChild(fileExplorer);
+            container.appendChild(contentWrapper);
+        }
+        
+        // Helper function to extract file names from diff
+        function extractFilesFromDiff(diffText) {
+            const files = [];
+            const lines = diffText.split('\n');
+            let currentFile = null;
+            
+            lines.forEach(line => {
+                if (line.startsWith('diff --git')) {
+                    const match = line.match(/diff --git a\/(.+?) b\/(.+)/);
+                    if (match) {
+                        currentFile = match[2];
+                        files.push({ name: currentFile });
+                    }
+                }
+            });
+            
+            return files;
         }
         
         function renderComments(prInfo, prIndex, viewerLogin) {
