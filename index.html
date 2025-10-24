@@ -450,7 +450,7 @@
             display: none;
         }
         
-        .comment-item.minimized-comment {
+        .comment-item.resolved-comment {
             /* Will be hidden by default but can be shown via toggle */
         }
         
@@ -1165,8 +1165,6 @@
                                     body
                                     createdAt
                                     updatedAt
-                                    isMinimized
-                                    minimizedReason
                                 }
                             }
                             reviews(first: 100) {
@@ -1177,6 +1175,11 @@
                                     body
                                     state
                                     createdAt
+                                }
+                            }
+                            reviewThreads(first: 100) {
+                                nodes {
+                                    isResolved
                                     comments(first: 100) {
                                         nodes {
                                             author {
@@ -1189,8 +1192,6 @@
                                             line
                                             originalLine
                                             createdAt
-                                            isMinimized
-                                            minimizedReason
                                         }
                                     }
                                 }
@@ -1673,8 +1674,8 @@
                         Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7)
                     </label>
                     <label>
-                        <input type="checkbox" id="hide-minimized-${prIndex}" onchange="toggleMinimizedComments(${prIndex})" checked>
-                        Hide minimized comments
+                        <input type="checkbox" id="hide-resolved-${prIndex}" onchange="toggleResolvedComments(${prIndex})" checked>
+                        Hide resolved threads
                     </label>
                     <label>
                         <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
@@ -1695,13 +1696,12 @@
                         body: comment.body,
                         createdAt: comment.createdAt,
                         isHidden: hiddenUsers.includes(comment.author.login),
-                        isMinimized: comment.isMinimized || false,
-                        minimizedReason: comment.minimizedReason || null
+                        isResolved: false // Issue comments don't have resolved state
                     });
                 });
             }
             
-            // Add review comments
+            // Add review comments (the review summary, not thread comments)
             if (prInfo.reviews && prInfo.reviews.nodes) {
                 prInfo.reviews.nodes.forEach(review => {
                     if (review.body) {
@@ -1711,15 +1711,22 @@
                             body: review.body,
                             state: review.state,
                             createdAt: review.createdAt,
-                            isHidden: hiddenUsers.includes(review.author.login)
+                            isHidden: hiddenUsers.includes(review.author.login),
+                            isResolved: false // Review summaries don't have resolved state
                         });
                     }
+                });
+            }
+            
+            // Add review thread comments
+            if (prInfo.reviewThreads && prInfo.reviewThreads.nodes) {
+                prInfo.reviewThreads.nodes.forEach(thread => {
+                    const isResolved = thread.isResolved || false;
                     
-                    // Add inline review comments
-                    if (review.comments && review.comments.nodes) {
-                        review.comments.nodes.forEach(comment => {
-                            const inlineComment = {
-                                type: 'inline',
+                    if (thread.comments && thread.comments.nodes) {
+                        thread.comments.nodes.forEach(comment => {
+                            const threadComment = {
+                                type: 'thread',
                                 author: comment.author.login,
                                 body: comment.body,
                                 path: comment.path,
@@ -1729,11 +1736,10 @@
                                 originalLine: comment.originalLine,
                                 createdAt: comment.createdAt,
                                 isHidden: hiddenUsers.includes(comment.author.login),
-                                isMinimized: comment.isMinimized || false,
-                                minimizedReason: comment.minimizedReason || null
+                                isResolved: isResolved
                             };
-                            allComments.push(inlineComment);
-                            inlineComments.push(inlineComment);
+                            allComments.push(threadComment);
+                            inlineComments.push(threadComment);
                         });
                     }
                 });
@@ -1752,33 +1758,32 @@
                     
                     if (comment.type === 'review') {
                         typeLabel = ` <span style="color: #0366d6; font-weight: 600;">[${comment.state}]</span>`;
-                    } else if (comment.type === 'inline') {
+                    } else if (comment.type === 'thread') {
                         const lineInfo = comment.line ? `:${comment.line}` : '';
                         typeLabel = ` <span style="color: #666; font-size: 12px;">(${escapeHtml(comment.path)}${lineInfo})</span>`;
                     }
                     
                     const hiddenClass = comment.isHidden ? 'hidden auto-hidden' : '';
-                    const minimizedClass = comment.isMinimized ? 'hidden minimized-comment' : '';
-                    const inlineClass = comment.type === 'inline' ? 'inline-comment' : '';
+                    const resolvedClass = comment.isResolved ? 'hidden resolved-comment' : '';
+                    const threadClass = comment.type === 'thread' ? 'thread-comment' : '';
                     
                     const manuallyHiddenKey = `${prIndex}-${idx}`;
                     const isManuallyHidden = hiddenComments[manuallyHiddenKey];
                     const manuallyHiddenClass = isManuallyHidden ? 'manually-hidden' : '';
                     const hideButtonText = isManuallyHidden ? 'Show' : 'Hide';
                     
-                    // Add minimized indicator to type label if comment is minimized
-                    let minimizedIndicator = '';
-                    if (comment.isMinimized) {
-                        const reason = comment.minimizedReason ? ` (${comment.minimizedReason})` : '';
-                        minimizedIndicator = ` <span style="color: #999; font-size: 11px; font-weight: 600;">[MINIMIZED${escapeHtml(reason)}]</span>`;
+                    // Add resolved indicator to type label if comment is resolved
+                    let resolvedIndicator = '';
+                    if (comment.isResolved) {
+                        resolvedIndicator = ` <span style="color: #22863a; font-size: 11px; font-weight: 600;">✓ [RESOLVED]</span>`;
                     }
                     
                     html += `
-                        <div class="comment-item ${hiddenClass} ${minimizedClass} ${inlineClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}" data-is-minimized="${comment.isMinimized}">
+                        <div class="comment-item ${hiddenClass} ${resolvedClass} ${threadClass} ${manuallyHiddenClass}" data-pr-index="${prIndex}" data-comment-index="${idx}" data-is-resolved="${comment.isResolved}">
                             <div class="comment-header">
                                 <span class="comment-author">${escapeHtml(comment.author)}</span>
                                 ${typeLabel}
-                                ${minimizedIndicator}
+                                ${resolvedIndicator}
                                 <span class="comment-date">${escapeHtml(date)}</span>
                                 <button class="comment-hide-btn" onclick="toggleCommentVisibility(${prIndex}, ${idx})">${hideButtonText}</button>
                             </div>
@@ -1810,9 +1815,9 @@
             });
         }
         
-        function toggleMinimizedComments(prIndex) {
-            const checkbox = document.getElementById(`hide-minimized-${prIndex}`);
-            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].minimized-comment`);
+        function toggleResolvedComments(prIndex) {
+            const checkbox = document.getElementById(`hide-resolved-${prIndex}`);
+            const comments = document.querySelectorAll(`[data-pr-index="${prIndex}"].resolved-comment`);
             comments.forEach(comment => {
                 if (checkbox.checked) {
                     comment.classList.add('hidden');

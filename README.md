@@ -12,7 +12,7 @@ A static site to combine and review multiple GitHub Pull Requests at once.
 - 📁 **File Explorer**: Aggregated tree view of all changed files across all PRs for quick navigation
 - 💬 **Comments & Reviews**: View all PR comments, reviews, and inline code comments in one place
 - 👁️ **Hide Individual Comments**: Hide/show individual comments with a single click, state persists in localStorage
-- 🙈 **Hide Minimized Comments**: Automatically hide minimized comments (spam, outdated, etc.) with a toggle to show them if needed
+- ✅ **Hide Resolved Threads**: Automatically hide resolved comment threads with a toggle to show them if needed
 - 🔗 **Jump Links**: Quick navigation links in the PR list to jump to each PR section
 - ✓ **Approval Status**: Visual indicators showing which PRs you have approved
 - ✍️ **Add Comments**: Post new comments directly from the interface
@@ -43,10 +43,10 @@ A static site to combine and review multiple GitHub Pull Requests at once.
    - Read comments and reviews from collaborators
    - **Filter Comments**: Use checkboxes to control comment visibility:
      - Hide automated comments from specific users (checked by default)
-     - Hide minimized comments (spam, outdated, resolved, etc. - checked by default)
+     - Hide resolved threads (checked by default)
      - Show/hide inline comments with diffs (checked by default)
    - Hide individual comments by clicking the "Hide" button (hidden state persists)
-   - Minimized comments show a [MINIMIZED] badge with the reason when visible
+   - Resolved threads show a ✓ [RESOLVED] badge when visible
    - Add your own comments using the comment box
    - Approve PRs with the "Approve PR" button
 
