@@ -1048,9 +1048,15 @@
                 let approvalBadge = '';
                 let generalStatusBadge = '';
                 let stateBadge = '';
+                let prUrl = `https://github.com/${pr}`; // Default URL constructed from PR path
                 
                 if (prDataCache && prDataCache[index]) {
                     const prData = prDataCache[index];
+                    
+                    // Use the actual PR URL from the cached data if available
+                    if (prData.info.url) {
+                        prUrl = prData.info.url;
+                    }
                     
                     // PR State badge
                     const state = prData.info.state.toLowerCase();
@@ -1109,7 +1115,7 @@
                 html += `
                     <div class="pr-item">
                         <a href="#pr-${index}">Jump to PR</a>
-                        <span>${escapeHtml(pr)}</span>
+                        <a href="${escapeHtml(prUrl)}" target="_blank">${escapeHtml(pr)}</a>
                         ${stateBadge}
                         ${generalStatusBadge}
                         ${approvalBadge}
