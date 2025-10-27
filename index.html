@@ -191,6 +191,13 @@
             text-decoration: underline;
         }
         
+        .pr-item .pr-name-link {
+            font-family: monospace;
+            font-weight: 400;
+            min-width: 280px;
+            display: inline-block;
+        }
+        
         .pr-item .approval-badge {
             margin-left: 10px;
             margin-right: 10px;
@@ -1115,7 +1122,7 @@
                 html += `
                     <div class="pr-item">
                         <a href="#pr-${index}">Jump to PR</a>
-                        <a href="${escapeHtml(prUrl)}" target="_blank">${escapeHtml(pr)}</a>
+                        <a href="${escapeHtml(prUrl)}" target="_blank" class="pr-name-link">${escapeHtml(pr)}</a>
                         ${stateBadge}
                         ${generalStatusBadge}
                         ${approvalBadge}
