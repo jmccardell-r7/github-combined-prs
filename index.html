@@ -1377,7 +1377,7 @@
                 }
                 
                 header.innerHTML = `
-                    <h2>${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
+                    <h2>${escapeHtml(prData.owner)}/${escapeHtml(prData.repo)} - ${escapeHtml(prData.info.title)} <a href="${escapeHtml(prData.info.url)}" target="_blank">#${prData.info.number}</a></h2>
                     ${prStateBanner}
                     ${approvalBanner}
                     <div class="pr-meta">
