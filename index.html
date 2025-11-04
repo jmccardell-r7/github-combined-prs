@@ -1470,11 +1470,11 @@
                 prHeader.className = 'pr-section-header';
                 prHeader.innerHTML = `
                     <span style="flex: 1; word-wrap: break-word; overflow-wrap: break-word; min-width: 0;">
-                        PR #${prData.info.number}: ${escapeHtml(prData.info.title)}
+                        ${escapeHtml(prData.owner)}/${escapeHtml(prData.repo)} - PR #${prData.info.number}: ${escapeHtml(prData.info.title)}
                     </span>
                     <span class="pr-section-toggle">▼</span>
                 `;
-                prHeader.title = `PR #${prData.info.number}: ${prData.info.title}`;
+                prHeader.title = `${prData.owner}/${prData.repo} - PR #${prData.info.number}: ${prData.info.title}`;
                 prHeader.onclick = () => togglePRSection(prIndex);
                 
                 // Create file tree container
