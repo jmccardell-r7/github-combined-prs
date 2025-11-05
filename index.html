@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub PR Combiner</title>
+    <title>Albatross</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
     <style>
         * {
@@ -789,7 +792,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔀 GitHub PR Combiner</h1>
+            <h1>🦅 Albatross</h1>
             <p>Combine multiple GitHub Pull Requests for review</p>
         </header>
 
@@ -2012,7 +2015,7 @@
                     },
                     body: JSON.stringify({
                         event: 'APPROVE',
-                        body: commentText || 'Approved via GitHub PR Combiner'
+                        body: commentText || 'Approved via Albatross'
                     })
                 });
                 
