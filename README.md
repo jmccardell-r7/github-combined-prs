@@ -1,4 +1,4 @@
-# GitHub Combined PRs
+# Albatross
 
 A static site to combine and review multiple GitHub Pull Requests at once.
 
@@ -90,7 +90,7 @@ You can interact with PRs directly from the interface:
 - **Add Comments**: Use the text area below each PR to post new comments
 - **Approve PRs**: Click the "Approve PR" button to submit an approval review
   - You can include an optional comment with your approval
-  - The default message is "Approved via GitHub PR Combiner" if no comment is provided
+  - The default message is "Approved via Albatross" if no comment is provided
 
 **Note**: Your GitHub PAT must have `repo` scope to post comments and approve PRs.
 
