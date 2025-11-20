@@ -831,6 +831,21 @@
             </div>
         </div>
 
+        <div class="pr-list" style="background: #f6f8fa; border: 2px solid #0366d6;">
+            <h2>🌐 Global Comment Settings</h2>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">These settings will apply to all PRs</p>
+            <div class="comments-filter" style="background: white;">
+                <label>
+                    <input type="checkbox" id="global-hide-resolved" onchange="updateGlobalSetting('hideResolved', this.checked)" checked>
+                    Hide resolved threads (all PRs)
+                </label>
+                <label>
+                    <input type="checkbox" id="global-show-inline" onchange="updateGlobalSetting('showInline', this.checked)" checked>
+                    Show inline comments with diffs (all PRs)
+                </label>
+            </div>
+        </div>
+
         <div class="main-content-wrapper">
             <div id="file-explorer" class="file-explorer">
                 <h2>📁 Files</h2>
@@ -872,7 +887,46 @@
     <script>
         const PAT_KEY = 'github_pat';
         const HIDDEN_COMMENTS_KEY = 'hidden_comments';
+        const GLOBAL_SETTINGS_KEY = 'global_comment_settings';
         let prDataCache = null;
+        
+        // Global settings management
+        function getGlobalSettings() {
+            const stored = localStorage.getItem(GLOBAL_SETTINGS_KEY);
+            return stored ? JSON.parse(stored) : {
+                hideResolved: true,
+                showInline: true
+            };
+        }
+        
+        function saveGlobalSettings(settings) {
+            localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(settings));
+        }
+        
+        function updateGlobalSetting(setting, value) {
+            const settings = getGlobalSettings();
+            settings[setting] = value;
+            saveGlobalSettings(settings);
+            
+            // Apply to all loaded PRs
+            if (prDataCache) {
+                prDataCache.forEach((_, index) => {
+                    if (setting === 'hideResolved') {
+                        const checkbox = document.getElementById(`hide-resolved-${index}`);
+                        if (checkbox) {
+                            checkbox.checked = value;
+                            toggleResolvedComments(index);
+                        }
+                    } else if (setting === 'showInline') {
+                        const checkbox = document.getElementById(`show-inline-${index}`);
+                        if (checkbox) {
+                            checkbox.checked = value;
+                            toggleInlineComments(index);
+                        }
+                    }
+                });
+            }
+        }
         
         // Security: HTML escape function to prevent XSS
         function escapeHtml(text) {
@@ -929,7 +983,23 @@
         document.addEventListener('DOMContentLoaded', function() {
             checkPATStatus();
             loadPRsFromURL();
+            loadGlobalSettings();
         });
+        
+        // Load and apply global settings to UI
+        function loadGlobalSettings() {
+            const settings = getGlobalSettings();
+            
+            const hideResolvedCheckbox = document.getElementById('global-hide-resolved');
+            if (hideResolvedCheckbox) {
+                hideResolvedCheckbox.checked = settings.hideResolved;
+            }
+            
+            const showInlineCheckbox = document.getElementById('global-show-inline');
+            if (showInlineCheckbox) {
+                showInlineCheckbox.checked = settings.showInline;
+            }
+        }
 
         // PAT Management
         function savePAT() {
@@ -1701,9 +1771,10 @@
         function renderComments(prInfo, prIndex, viewerLogin) {
             const hiddenUsers = ['simonirwin-r7', 'compliance-r7', 'pd-sonarqube-r7', 'copilot-pull-request-reviewer', 'jenkins-eks-aicoe'];
             const hiddenComments = getHiddenComments();
+            const globalSettings = getGlobalSettings();
             let html = '<h3>Comments and Reviews</h3>';
             
-            // Add filter controls
+            // Add filter controls - initialized from global settings
             html += `
                 <div class="comments-filter">
                     <label>
@@ -1711,11 +1782,11 @@
                         Hide automated comments (simonirwin-r7, compliance-r7, pd-sonarqube-r7, copilot-pull-request-reviewer, jenkins-eks-aicoe)
                     </label>
                     <label>
-                        <input type="checkbox" id="hide-resolved-${prIndex}" onchange="toggleResolvedComments(${prIndex})" checked>
+                        <input type="checkbox" id="hide-resolved-${prIndex}" onchange="toggleResolvedComments(${prIndex})" ${globalSettings.hideResolved ? 'checked' : ''}>
                         Hide resolved threads
                     </label>
                     <label>
-                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" checked>
+                        <input type="checkbox" id="show-inline-${prIndex}" onchange="toggleInlineComments(${prIndex})" ${globalSettings.showInline ? 'checked' : ''}>
                         Show inline comments with diffs
                     </label>
                 </div>
