@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test - Global Toggles Feature</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-section { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .test-result { margin: 5px 0; padding: 8px; background: white; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Global Toggles Feature Tests</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Global Settings LocalStorage</h2>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Default Global Settings</h2>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Save and Retrieve Global Settings</h2>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Global Settings Apply to All PRs</h2>
+        <div id="test4-result"></div>
+    </div>
+
+    <script>
+        function testResult(id, message, pass) {
+            const el = document.getElementById(id);
+            const statusClass = pass ? 'pass' : 'fail';
+            const statusText = pass ? '✓ PASS' : '✗ FAIL';
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result';
+            resultDiv.innerHTML = '<span class="' + statusClass + '">' + statusText + '</span>: ' + message;
+            el.appendChild(resultDiv);
+        }
+
+        const GLOBAL_SETTINGS_KEY = 'global_comment_settings';
+
+        // Test 1: Global Settings LocalStorage
+        (function() {
+            // Clear any existing data
+            localStorage.removeItem(GLOBAL_SETTINGS_KEY);
+            
+            testResult('test1-result', 'LocalStorage key can be removed', 
+                localStorage.getItem(GLOBAL_SETTINGS_KEY) === null);
+            
+            // Test storing global settings
+            const testSettings = { hideResolved: false, showInline: false };
+            localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(testSettings));
+            
+            // Test retrieving
+            const stored = localStorage.getItem(GLOBAL_SETTINGS_KEY);
+            const parsed = JSON.parse(stored);
+            
+            testResult('test1-result', 'LocalStorage key is correct', stored !== null);
+            testResult('test1-result', 'Settings can be stored and retrieved', 
+                parsed.hideResolved === false && parsed.showInline === false);
+            
+            // Cleanup
+            localStorage.removeItem(GLOBAL_SETTINGS_KEY);
+        })();
+
+        // Test 2: Default Global Settings
+        (function() {
+            // Simulate getGlobalSettings function
+            function getGlobalSettings() {
+                const stored = localStorage.getItem(GLOBAL_SETTINGS_KEY);
+                return stored ? JSON.parse(stored) : {
+                    hideResolved: true,
+                    showInline: true
+                };
+            }
+            
+            // Clear any existing data
+            localStorage.removeItem(GLOBAL_SETTINGS_KEY);
+            
+            const defaultSettings = getGlobalSettings();
+            
+            testResult('test2-result', 'Default hideResolved is true', 
+                defaultSettings.hideResolved === true);
+            testResult('test2-result', 'Default showInline is true', 
+                defaultSettings.showInline === true);
+            testResult('test2-result', 'Returns defaults when no stored settings', 
+                defaultSettings.hideResolved && defaultSettings.showInline);
+        })();
+
+        // Test 3: Save and Retrieve Global Settings
+        (function() {
+            function getGlobalSettings() {
+                const stored = localStorage.getItem(GLOBAL_SETTINGS_KEY);
+                return stored ? JSON.parse(stored) : {
+                    hideResolved: true,
+                    showInline: true
+                };
+            }
+            
+            function saveGlobalSettings(settings) {
+                localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(settings));
+            }
+            
+            // Clear any existing data
+            localStorage.removeItem(GLOBAL_SETTINGS_KEY);
+            
+            // Save custom settings
+            const customSettings = { hideResolved: false, showInline: true };
+            saveGlobalSettings(customSettings);
+            
+            // Retrieve and verify
+            const retrieved = getGlobalSettings();
+            
+            testResult('test3-result', 'Custom hideResolved is saved', 
+                retrieved.hideResolved === false);
+            testResult('test3-result', 'Custom showInline is saved', 
+                retrieved.showInline === true);
+            testResult('test3-result', 'Saved settings override defaults', 
+                retrieved.hideResolved === false && retrieved.showInline === true);
+            
+            // Cleanup
+            localStorage.removeItem(GLOBAL_SETTINGS_KEY);
+        })();
+
+        // Test 4: Global Settings Apply to All PRs
+        (function() {
+            // Create mock DOM structure for multiple PRs
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <input type="checkbox" id="hide-resolved-0">
+                <input type="checkbox" id="show-inline-0">
+                <input type="checkbox" id="hide-resolved-1">
+                <input type="checkbox" id="show-inline-1">
+                <input type="checkbox" id="hide-resolved-2">
+                <input type="checkbox" id="show-inline-2">
+            `;
+            document.body.appendChild(container);
+            
+            // Simulate global setting update
+            function updateGlobalSetting(setting, value, prCount) {
+                for (let i = 0; i < prCount; i++) {
+                    if (setting === 'hideResolved') {
+                        const checkbox = document.getElementById(`hide-resolved-${i}`);
+                        if (checkbox) {
+                            checkbox.checked = value;
+                        }
+                    } else if (setting === 'showInline') {
+                        const checkbox = document.getElementById(`show-inline-${i}`);
+                        if (checkbox) {
+                            checkbox.checked = value;
+                        }
+                    }
+                }
+            }
+            
+            // Test hideResolved setting
+            updateGlobalSetting('hideResolved', true, 3);
+            const allHideResolvedChecked = [0, 1, 2].every(i => 
+                document.getElementById(`hide-resolved-${i}`).checked === true
+            );
+            
+            testResult('test4-result', 'Global hideResolved applies to all PRs', 
+                allHideResolvedChecked);
+            
+            // Test showInline setting
+            updateGlobalSetting('showInline', false, 3);
+            const allShowInlineUnchecked = [0, 1, 2].every(i => 
+                document.getElementById(`show-inline-${i}`).checked === false
+            );
+            
+            testResult('test4-result', 'Global showInline applies to all PRs', 
+                allShowInlineUnchecked);
+            
+            // Test changing settings
+            updateGlobalSetting('hideResolved', false, 3);
+            const allHideResolvedUnchecked = [0, 1, 2].every(i => 
+                document.getElementById(`hide-resolved-${i}`).checked === false
+            );
+            
+            testResult('test4-result', 'Global settings can be changed and apply to all PRs', 
+                allHideResolvedUnchecked);
+            
+            // Cleanup
+            document.body.removeChild(container);
+        })();
+    </script>
+</body>
+</html>

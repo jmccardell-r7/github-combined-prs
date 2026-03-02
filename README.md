@@ -11,6 +11,7 @@ A static site to combine and review multiple GitHub Pull Requests at once.
 - 🎨 **Beautiful Diffs**: Renders all file changes using diff2html with side-by-side view
 - 📁 **File Explorer**: Aggregated tree view of all changed files across all PRs for quick navigation
 - 💬 **Comments & Reviews**: View all PR comments, reviews, and inline code comments in one place
+- 🌐 **Global Comment Settings**: Set preferences for all PRs at once (hide resolved threads, show inline comments)
 - 👁️ **Hide Individual Comments**: Hide/show individual comments with a single click, state persists in localStorage
 - ✅ **Hide Resolved Threads**: Automatically hide resolved comment threads with a toggle to show them if needed
 - 🔗 **Jump Links**: Quick navigation links in the PR list to jump to each PR section
@@ -41,10 +42,14 @@ A static site to combine and review multiple GitHub Pull Requests at once.
    - The "Current PRs" list shows approval status and jump links for each PR
    - Diffs are rendered in a side-by-side format
    - Read comments and reviews from collaborators
-   - **Filter Comments**: Use checkboxes to control comment visibility:
+   - **Global Comment Settings**: Set preferences that apply to all PRs:
+     - Hide resolved threads (all PRs) - checked by default
+     - Show inline comments with diffs (all PRs) - checked by default
+     - Settings persist across sessions and automatically apply to newly loaded PRs
+   - **Per-PR Filter Controls**: Each PR also has individual checkboxes to override global settings:
      - Hide automated comments from specific users (checked by default)
-     - Hide resolved threads (checked by default)
-     - Show/hide inline comments with diffs (checked by default)
+     - Hide resolved threads (inherits from global setting)
+     - Show/hide inline comments with diffs (inherits from global setting)
    - Hide individual comments by clicking the "Hide" button (hidden state persists)
    - Resolved threads show a ✓ [RESOLVED] badge when visible
    - Add your own comments using the comment box
